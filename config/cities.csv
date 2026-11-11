@@ -1,0 +1,39 @@
+city,country,cc,lat,lon,radius_km,review_offer
+New Delhi,India,IN,28.6139,77.2090,25,restricted
+Mumbai,India,IN,19.0760,72.8777,25,restricted
+Kolkata,India,IN,22.5726,88.3639,20,restricted
+Bengaluru,India,IN,12.9716,77.5946,22,restricted
+Chennai,India,IN,13.0827,80.2707,20,restricted
+Hyderabad,India,IN,17.3850,78.4867,22,restricted
+Lucknow,India,IN,26.8467,80.9462,15,restricted
+Jaipur,India,IN,26.9124,75.7873,15,restricted
+Bhopal,India,IN,23.2599,77.4126,15,restricted
+Patna,India,IN,25.5941,85.1376,12,restricted
+Chandigarh,India,IN,30.7333,76.7794,15,restricted
+Bhubaneswar,India,IN,20.2961,85.8245,12,restricted
+Thiruvananthapuram,India,IN,8.5241,76.9366,12,restricted
+Guwahati,India,IN,26.1445,91.7362,12,restricted
+Ranchi,India,IN,23.3441,85.3096,12,restricted
+Raipur,India,IN,21.2514,81.6296,12,restricted
+Dehradun,India,IN,30.3165,78.0322,12,restricted
+Gandhinagar,India,IN,23.2156,72.6369,12,restricted
+Panaji,India,IN,15.4909,73.8278,10,restricted
+Washington,United States,US,38.9072,-77.0369,20,allowed-with-rules
+London,United Kingdom,GB,51.5074,-0.1278,20,allowed-with-rules
+Ottawa,Canada,CA,45.4215,-75.6972,20,check
+Canberra,Australia,AU,-35.2809,149.1300,20,restricted
+Wellington,New Zealand,NZ,-41.2866,174.7756,15,check
+Dublin,Ireland,IE,53.3498,-6.2603,15,check
+Abu Dhabi,United Arab Emirates,AE,24.4539,54.3773,25,check
+Riyadh,Saudi Arabia,SA,24.7136,46.6753,25,check
+Doha,Qatar,QA,25.2854,51.5310,20,check
+Kuwait City,Kuwait,KW,29.3759,47.9774,20,check
+Muscat,Oman,OM,23.5880,58.3829,20,check
+Manama,Bahrain,BH,26.2285,50.5860,15,check
+Singapore,Singapore,SG,1.3521,103.8198,20,restricted
+Kuala Lumpur,Malaysia,MY,3.1390,101.6869,20,check
+Pretoria,South Africa,ZA,-25.7479,28.2293,20,check
+Nairobi,Kenya,KE,-1.2921,36.8219,15,check
+Kathmandu,Nepal,NP,27.7172,85.3240,12,check
+Dhaka,Bangladesh,BD,23.8103,90.4125,15,check
+Colombo,Sri Lanka,LK,6.9271,79.8612,12,check

@@ -1,0 +1,5 @@
+data/*.sqlite
+data/*.csv
+data/*.xlsx
+__pycache__/
+*.pyc
