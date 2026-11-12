@@ -1,0 +1,510 @@
+<title>Clinic Front Desk</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+/* Layout: a reception desk. The phone call sits on the left, the appointment diary and the
+   clinic's other books sit on the right; on a phone they become tabs of one column. */
+:root {
+  --bg: #f1f5f6; --surface: #ffffff; --sunk: #e8eef0; --ink: #13262d; --muted: #566b74; --line: #d3dde1;
+  --accent: #0b6b78; --accent-ink: #ffffff; --accent-soft: #dcf0f1;
+  --good: #1c7448; --good-soft: #def2e6; --warn: #9a4a06; --warn-soft: #fcebd3; --bad: #ad241c; --bad-soft: #fae2e0;
+  --slip: #fff7d6; --slip-line: #e6d48a;
+  --display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0d161a; --surface: #152229; --sunk: #0f1b20; --ink: #e4edf0; --muted: #94a8b1; --line: #2a3c45;
+  --accent: #52c2cd; --accent-ink: #05262b; --accent-soft: #12353b;
+  --good: #63d09a; --good-soft: #133424; --warn: #f0a55c; --warn-soft: #382816; --bad: #f18d85; --bad-soft: #3b1b19;
+  --slip: #2a2817; --slip-line: #5a5226; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0d161a; --surface: #152229; --sunk: #0f1b20; --ink: #e4edf0; --muted: #94a8b1; --line: #2a3c45;
+  --accent: #52c2cd; --accent-ink: #05262b; --accent-soft: #12353b;
+  --good: #63d09a; --good-soft: #133424; --warn: #f0a55c; --warn-soft: #382816; --bad: #f18d85; --bad-soft: #3b1b19;
+  --slip: #2a2817; --slip-line: #5a5226; color-scheme: dark }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 18px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 16px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; margin: 0; text-wrap: balance; }
+h1 { font-size: 1.5rem; letter-spacing: -0.01em; }
+h2 { font-size: 1.1rem; }
+h3 { font-size: 0.95rem; }
+p { margin: 0; }
+.muted { color: var(--muted); }
+.small { font-size: 0.86rem; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.label { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+
+button, select, input { font: inherit; color: inherit; }
+button { cursor: pointer; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 12px; }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+button:disabled { opacity: 0.55; cursor: default; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+select, input[type="text"] { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+
+header.top { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; }
+.clinic { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.example { align-self: flex-start; background: var(--warn-soft); color: var(--warn); border-radius: 999px; padding: 2px 10px; font-size: 0.78rem; font-weight: 600; }
+.clock { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.clock .now { font-family: var(--mono); font-size: 0.95rem; padding: 6px 10px; background: var(--sunk); border-radius: 8px; }
+
+.events { background: var(--accent-soft); border-radius: var(--r); padding: 10px 14px; display: flex; flex-direction: column; gap: 2px; font-size: 0.9rem; }
+
+main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+#books { order: -1; }                       /* one column: the tabs come first, the call opens under them */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); min-width: 0; }
+.panel > .head { padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: space-between; }
+.panel > .body { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+
+.tabs { display: flex; gap: 4px; overflow-x: auto; padding: 8px 8px 0; border-bottom: 1px solid var(--line); scrollbar-width: none; }
+.tabs button { border: 0; border-bottom: 3px solid transparent; border-radius: 6px 6px 0 0; background: none; padding: 8px 12px; color: var(--muted); font-weight: 500; white-space: nowrap; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+
+/* the call */
+.brain { font-size: 0.8rem; border-radius: 999px; padding: 2px 10px; background: var(--good-soft); color: var(--good); font-weight: 600; }
+.brain.scripted { background: var(--sunk); color: var(--muted); }
+.talk { display: flex; flex-direction: column; gap: 10px; min-height: 240px; max-height: 52vh; overflow-y: auto; padding: 4px 2px; }
+.line { max-width: 86%; padding: 9px 13px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.line.desk { align-self: flex-start; background: var(--sunk); border-bottom-left-radius: 4px; }
+.line.caller { align-self: flex-end; background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: 4px; }
+.line.note { align-self: center; background: none; color: var(--muted); font-size: 0.85rem; padding: 0; text-align: center; }
+.who { display: block; font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.75; margin-bottom: 2px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button { font-size: 0.85rem; border-radius: 999px; padding: 5px 12px; background: var(--bg); text-align: left; }
+.say { display: flex; gap: 8px; align-items: center; }
+.say input { flex: 1; }
+.mic { width: 44px; height: 44px; border-radius: 50%; padding: 0; display: grid; place-items: center; flex: none; }
+.mic svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.mic.on { background: var(--bad); border-color: var(--bad); color: var(--surface); }
+.callopts { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; }
+.callopts label { display: flex; gap: 6px; align-items: center; }
+
+/* the diary */
+.days { display: flex; gap: 6px; flex-wrap: wrap; }
+.days button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); font-weight: 600; }
+.session { display: flex; flex-direction: column; gap: 4px; }
+.slot { display: grid; grid-template-columns: 4.6rem minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 7px 10px; border-radius: 8px; background: var(--bg); }
+.slot.free { background: none; border: 1px dashed var(--line); color: var(--muted); }
+.slot.fresh { background: var(--slip); box-shadow: inset 0 0 0 1px var(--slip-line); }
+.slot .t { font-family: var(--mono); font-size: 0.88rem; }
+.slot .p { min-width: 0; }
+.slot .p b { font-weight: 600; }
+.pills { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.pill { font-size: 0.74rem; font-weight: 600; border-radius: 999px; padding: 1px 9px; background: var(--sunk); color: var(--muted); white-space: nowrap; }
+.pill.good { background: var(--good-soft); color: var(--good); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); }
+.pill.acc { background: var(--accent-soft); color: var(--accent); }
+
+.rows { display: flex; flex-direction: column; gap: 8px; }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 10px 12px; border-radius: 8px; background: var(--bg); }
+.row .sub { grid-column: 1 / -1; }
+.msg { border-left: 3px solid var(--line); padding: 2px 0 2px 12px; display: flex; flex-direction: column; gap: 4px; }
+.msg.sent { border-left-color: var(--good); }
+.msg .text { background: var(--bg); border-radius: 4px 12px 12px 12px; padding: 8px 12px; max-width: 46rem; }
+.msg .meta { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+
+.verdict { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.verdict .big { font-family: var(--display); font-weight: 600; font-size: 1.25rem; }
+ul.plain { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 4px; max-width: 46rem; }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: 10px; }
+.tile { background: var(--bg); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+.tile .n { font-family: var(--display); font-weight: 600; font-size: 1.7rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tile.attn .n { color: var(--bad); }
+
+.services { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 12px; }
+.service { display: flex; flex-direction: column; gap: 4px; padding-top: 10px; border-top: 2px solid var(--accent); }
+
+@media (min-width: 920px) {
+  main { grid-template-columns: minmax(0, 23rem) minmax(0, 1fr); }
+  #books { order: 0; }
+  #callPanel { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); }
+  #tab-call { display: none; }
+}
+@media (prefers-reduced-motion: no-preference) { .slot.fresh { transition: background 0.6s; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="clinic">
+      <span class="example">Example clinic · every patient here is invented</span>
+      <h1 id="clinicName">Dr. Sen's Dental Clinic</h1>
+      <p class="muted small" id="clinicFacts"></p>
+    </div>
+    <div class="clock" aria-label="Demo clock">
+      <span class="now" id="now"></span>
+      <button id="plusHour" type="button">+1 hour</button>
+      <button id="nextMorning" type="button">Next morning</button>
+      <button id="reset" type="button">Reset</button>
+    </div>
+  </header>
+
+  <div class="events" id="events" hidden aria-live="polite"></div>
+
+  <main>
+    <section class="panel" id="callPanel" aria-label="Phone call">
+      <div class="head">
+        <h2>Incoming call</h2>
+        <span class="brain scripted" id="brain">Starting…</span>
+      </div>
+      <div class="body">
+        <div class="talk" id="talk" aria-live="polite"></div>
+        <div class="chips" id="openers"></div>
+        <form class="say" id="sayForm">
+          <button class="mic" id="mic" type="button" hidden aria-label="Speak">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+          </button>
+          <input type="text" id="sayText" autocomplete="off" placeholder="Speak as the caller…" aria-label="What the caller says">
+          <button class="primary" id="send" type="submit">Say</button>
+        </form>
+        <div class="callopts small">
+          <label id="voiceWrap" hidden><input type="checkbox" id="voiceOn" checked> Receptionist speaks aloud</label>
+          <button id="hangup" type="button">New call</button>
+        </div>
+        <p class="muted small" id="callHelp"></p>
+      </div>
+    </section>
+
+    <section class="panel" id="books" aria-label="Clinic books">
+      <div class="tabs" role="tablist" id="tabs"></div>
+      <div class="body" id="view"></div>
+    </section>
+  </main>
+</div>
+
+<script src="engine.js"></script>
+<script>
+(function () {
+  "use strict";
+  var E = window.ClinicEngine;
+  var $ = function (id) { return document.getElementById(id); };
+  function h(tag, attrs) {
+    var el = document.createElement(tag);
+    for (var k in attrs || {}) {
+      if (k === "class") el.className = attrs[k];
+      else if (k === "text") el.textContent = attrs[k];
+      else if (k.slice(0, 2) === "on") el.addEventListener(k.slice(2), attrs[k]);
+      else if (attrs[k] !== false && attrs[k] != null) el.setAttribute(k, attrs[k]);
+    }
+    for (var i = 2; i < arguments.length; i++) {
+      var c = arguments[i];
+      if (c == null || c === false) continue;
+      el.append(c.nodeType ? c : document.createTextNode(String(c)));
+    }
+    return el;
+  }
+  function pill(text, tone) { return h("span", { class: "pill " + (tone || ""), text: text }); }
+
+  var state, turns, scripted;
+  var sample = null, canTools = false, dict = null, tts = null, useClaude = false;
+  var busy = false, diaryDay = 0, tab = "diary", msgFilter = "scheduled", heard = "", sendTimer = null;
+  var TABS = [["call", "Call"], ["diary", "Diary"], ["followups", "Follow-ups"], ["messages", "Messages"],
+              ["reviews", "Reviews"], ["sheet", "Daily sheet"], ["services", "Services"]];
+
+  function boot() {
+    state = E.createState(new Date());
+    state.started = state.now;
+    turns = [];
+    scripted = new E.Scripted(state, renderAll);
+    $("talk").replaceChildren();
+    $("openers").hidden = false;
+    greet();
+    $("events").hidden = true;
+    renderAll();
+  }
+  function greet() {
+    var open = E.isOpenNow(state);
+    var text = "Good " + (state.now.getHours() < 12 ? "morning" : state.now.getHours() < 17 ? "afternoon" : "evening") +
+      ", " + state.clinic.name + ". " + (open ? "" : "The clinic is closed just now, but I can help you. ") + "How can I help?";
+    addLine("desk", text);
+    turns.push({ role: "assistant", content: text });
+  }
+
+  // ---------------------------------------------------------------- the call
+  function addLine(kind, text) {
+    var el = h("div", { class: "line " + kind },
+      kind === "note" ? null : h("span", { class: "who", text: kind === "desk" ? "Receptionist" : "Caller" }), text);
+    $("talk").append(el);
+    $("talk").scrollTop = $("talk").scrollHeight;
+    return el;
+  }
+  function setBrain() {
+    var el = $("brain");
+    el.textContent = useClaude ? "Claude is answering" : "Scripted stand-in";
+    el.className = "brain" + (useClaude ? "" : " scripted");
+    $("callHelp").textContent = useClaude
+      ? "You are the patient. Talk the way a real caller would, in English, Hindi or Bengali. The first message asks your permission to use Claude."
+      : "Claude is not available in this view, so a simple scripted receptionist is answering. It understands plain English booking requests.";
+    var list = ["I have a toothache. Can I come tomorrow evening?", "What are your timings and the fee?", "Which painkiller should I take?"];
+    if (useClaude) list.push("कल शाम का अपॉइंटमेंट चाहिए", "I need to cancel my appointment, my name is Arjun Nair");
+    $("openers").replaceChildren.apply($("openers"), list.map(function (t) {
+      return h("button", { type: "button", text: t, onclick: function () { say(t); } });
+    }));
+  }
+  function trimTurns() { while (turns.length > 24) turns.shift(); if (turns[0] && turns[0].role === "assistant" && turns.length > 23) turns.shift(); }
+
+  async function say(text) {
+    text = String(text || "").trim();
+    if (!text || busy) return;
+    busy = true; $("send").disabled = true; $("sayText").value = ""; $("openers").hidden = true;
+    addLine("caller", text);
+    turns.push({ role: "user", content: text });
+    var bubble = addLine("desk", "…");
+    var answer = "";
+    try {
+      if (useClaude) {
+        var res = await sample([{ role: "user", content: E.rules(state) }].concat(turns), {
+          tools: E.tools(state, renderAll), modelTier: "quick",
+          onText: function (u) { bubble.lastChild.textContent = u.text; $("talk").scrollTop = $("talk").scrollHeight; }
+        });
+        answer = res.text;
+      } else {
+        answer = scripted.reply(text);
+      }
+    } catch (e) {
+      var code = e && e.code;
+      if (code === "rate_limited") answer = "(Claude is busy for the moment. Please try again in a little while.)";
+      else if (code === "refused" || code === "empty_completion") answer = "Sorry, could you say that another way?";
+      else {                                   // Claude cannot be used in this view: carry on with the stand-in
+        useClaude = false; setBrain();
+        answer = scripted.reply(text);
+      }
+    }
+    bubble.lastChild.textContent = answer;
+    $("talk").scrollTop = $("talk").scrollHeight;
+    turns.push({ role: "assistant", content: answer });
+    trimTurns();
+    busy = false; $("send").disabled = false;
+    renderAll();
+    speak(answer);
+  }
+  function speak(text) {
+    if (!$("voiceOn").checked || $("voiceWrap").hidden) return;
+    if (tts) {
+      tts.speak(text.slice(0, 1900)).catch(function (e) {
+        if (e && (e.code === "not_granted" || e.code === "unavailable")) { tts = null; $("voiceWrap").hidden = true; }
+      });
+    } else if (window.speechSynthesis) {
+      try { window.speechSynthesis.cancel(); window.speechSynthesis.speak(new SpeechSynthesisUtterance(text)); } catch (e) { /* silent */ }
+    }
+  }
+  function stopSpeaking() {
+    if (tts) tts.stop().catch(function () {});
+    else if (window.speechSynthesis) { try { window.speechSynthesis.cancel(); } catch (e) { /* nothing */ } }
+  }
+  $("sayForm").addEventListener("submit", function (ev) { ev.preventDefault(); say($("sayText").value); });
+  $("hangup").addEventListener("click", function () {
+    stopSpeaking(); turns = []; scripted = new E.Scripted(state, renderAll);
+    addLine("note", "— new call —"); greet(); $("openers").hidden = false;
+  });
+  $("voiceOn").addEventListener("change", function () { if (!this.checked) stopSpeaking(); });
+
+  function wireDictation() {
+    var mic = $("mic");
+    mic.hidden = false;
+    dict.onPartial(function (e) { if (e.text) $("sayText").value = (heard + " " + e.text).trim(); });
+    dict.onFinal(function (e) {
+      heard = (heard + e.text).trim(); $("sayText").value = heard;
+      clearTimeout(sendTimer);
+      sendTimer = setTimeout(finishListening, 1300);
+    });
+    dict.onState(function (e) {
+      var on = e.state === "listening" || e.state === "starting";
+      mic.classList.toggle("on", on);
+      mic.setAttribute("aria-label", on ? "Stop and send" : "Speak");
+      if (e.state === "idle" && (e.reason === "not_granted" || e.reason === "unavailable")) mic.hidden = true;
+    });
+    mic.addEventListener("click", function () {
+      if (dict.active()) { finishListening(); return; }
+      stopSpeaking(); heard = "";
+      dict.start().catch(function (e) { if (e && (e.code === "not_granted" || e.code === "unavailable")) mic.hidden = true; });
+    });
+  }
+  async function finishListening() {
+    clearTimeout(sendTimer);
+    try { await dict.stop(); } catch (e) { /* already stopped */ }
+    var text = $("sayText").value; heard = "";
+    if (text.trim()) say(text);
+  }
+
+  // ---------------------------------------------------------------- the books
+  function renderAll() {
+    $("clinicFacts").textContent = state.clinic.doctor + " · " + state.clinic.address + " · " + state.clinic.hoursText;
+    $("now").textContent = "Demo clock: " + E.niceDay(E.iso(state.now), state.now).replace(/^today, /, "") + ", " + E.nice12(E.hm(state.now));
+    $("tabs").replaceChildren.apply($("tabs"), TABS.map(function (t) {
+      return h("button", { type: "button", role: "tab", id: "tab-" + t[0], "aria-selected": String(tab === t[0]), text: t[1],
+        onclick: function () { tab = t[0]; renderAll(); } });
+    }));
+    var wide = window.matchMedia("(min-width: 920px)").matches;
+    if (wide && tab === "call") tab = "diary";
+    $("callPanel").hidden = !wide && tab !== "call";
+    $("view").hidden = tab === "call";
+    if (tab !== "call") $("view").replaceChildren.apply($("view"), VIEWS[tab]());
+  }
+  window.matchMedia("(min-width: 920px)").addEventListener("change", renderAll);
+
+  var VIEWS = {
+    diary: function () {
+      var today = E.iso(state.now), day = E.addDays(today, diaryDay);
+      var picks = h("div", { class: "days" });
+      for (var i = 0; i < 4; i++) (function (i) {
+        var d = E.addDays(today, i);
+        picks.append(h("button", { type: "button", "aria-pressed": String(i === diaryDay),
+          text: i === 0 ? "Today" : i === 1 ? "Tomorrow" : E.niceDay(d, state.now), onclick: function () { diaryDay = i; renderAll(); } }));
+      })(i);
+      var out = [h("div", { class: "label", text: "Appointment diary · " + state.clinic.slotMin + "-minute slots" }), picks];
+      var slots = E.slotsFor(state, day);
+      if (!slots.length) { out.push(h("p", { class: "muted", text: "The clinic is closed on " + E.niceDay(day, state.now) + ". The assistant still answers calls and books the next open day." })); return out; }
+      [["Morning OPD", function (t) { return t < "13:00"; }], ["Evening OPD", function (t) { return t >= "13:00"; }]].forEach(function (sess) {
+        var box = h("div", { class: "session" }, h("h3", { text: sess[0] }));
+        slots.filter(sess[1]).forEach(function (t) {
+          var a = state.appointments.filter(function (x) { return x.status !== "cancelled" && E.iso(x.start) === day && E.hm(x.start) === t; })[0];
+          if (!a) {
+            var gone = E.at(day, t) <= state.now;
+            box.append(h("div", { class: "slot free" }, h("span", { class: "t", text: E.nice12(t) }), h("span", { class: "p", text: gone ? "—" : "Free" }), h("span")));
+            return;
+          }
+          var st = { booked: ["Booked", "acc"], seen: ["Seen", "good"], missed: ["Did not come", "bad"] }[a.status];
+          box.append(h("div", { class: "slot" + (a.source === "Phone call" && a.bookedAt >= state.started ? " fresh" : "") },
+            h("span", { class: "t", text: E.nice12(t) }),
+            h("span", { class: "p" }, h("b", { text: a.name }), " · " + a.reason, h("br"), h("span", { class: "muted small mono", text: "Token " + a.token + " · " + a.phone })),
+            h("span", { class: "pills" }, a.afterHours ? pill("After hours", "warn") : null, pill(a.source), pill(st[0], st[1]))));
+        });
+        out.push(box);
+      });
+      return out;
+    },
+    followups: function () {
+      var tone = { waiting: ["Reminder scheduled", ""], reminded: ["Reminded, no booking yet", "warn"], booked: ["Booked", "good"], overdue: ["Overdue", "bad"] };
+      var rows = h("div", { class: "rows" });
+      state.followups.slice().sort(function (a, b) { return a.due < b.due ? -1 : 1; }).forEach(function (f) {
+        var next = state.messages.filter(function (m) { return m.ref === f && m.status === "scheduled"; })[0];
+        rows.append(h("div", { class: "row" },
+          h("span", null, h("b", { text: f.name }), " · " + f.reason), pill(tone[f.status][0], tone[f.status][1]),
+          h("span", { class: "sub muted small" }, "Advised " + E.niceDay(f.advised, state.now) + " · due " + E.niceDay(f.due, state.now) +
+            (next ? " · next message " + E.niceWhen(next.at, state.now) : f.status === "booked" ? "" : " · no further message scheduled"))));
+      });
+      return [h("div", { class: "label", text: "Review visits the doctor asked for" }),
+        h("p", { class: "muted small", text: "Only visits the doctor advised are followed up. Nobody receives a general \"come for a check-up\" promotion." }), rows];
+    },
+    messages: function () {
+      var picks = h("div", { class: "days" });
+      [["scheduled", "Scheduled"], ["sent", "Sent"]].forEach(function (f) {
+        picks.append(h("button", { type: "button", "aria-pressed": String(msgFilter === f[0]), text: f[1] + " (" + state.messages.filter(function (m) { return m.status === f[0]; }).length + ")",
+          onclick: function () { msgFilter = f[0]; renderAll(); } }));
+      });
+      var list = state.messages.filter(function (m) { return m.status === msgFilter; })
+        .sort(function (a, b) { return msgFilter === "sent" ? b.at - a.at : a.at - b.at; });
+      var rows = h("div", { class: "rows" });
+      list.forEach(function (m) {
+        rows.append(h("div", { class: "msg " + m.status },
+          h("div", { class: "meta small" }, h("b", { text: E.messageLabel(state, m) }), h("span", { class: "muted", text: "to " + m.to + " · " + m.channel }),
+            h("span", { class: "mono muted", text: E.niceWhen(m.at, state.now) })),
+          h("div", { class: "text", text: E.messageText(state, m) })));
+      });
+      if (!list.length) rows.append(h("p", { class: "muted", text: "Nothing here yet. Move the demo clock forward to see messages go out." }));
+      return [h("div", { class: "label", text: "Messages to patients" }),
+        h("p", { class: "muted small", text: "In this demo nothing is really sent. In a clinic these go from the clinic's own WhatsApp number or e-mail, to patients who agreed to receive them." }), picks, rows];
+    },
+    reviews: function () {
+      var pol = E.reviewPolicy(state.clinic.cc);
+      var sel = h("select", { id: "country", "aria-label": "Country of the clinic", onchange: function () { state.clinic.cc = this.value; renderAll(); } });
+      Object.keys(E.REVIEW_RULES).forEach(function (cc) { sel.append(h("option", { value: cc, selected: cc === state.clinic.cc, text: E.REVIEW_RULES[cc].label })); });
+      var sampleMsg = { kind: "aftervisit", ref: { name: "Priya Sharma", start: state.now } };
+      var verdict = pol.allowed === true ? ["Review requests: on", "good"] : pol.allowed === false ? ["Review requests: off", "bad"] : ["Check the local rules first", "warn"];
+      return [h("div", { class: "label", text: "Google reviews" }),
+        h("div", { class: "verdict" }, h("label", { for: "country", text: "This clinic is in" }), sel),
+        h("div", { class: "verdict" }, h("span", { class: "big", text: verdict[0] }), pill(pol.allowed === true ? "Allowed with rules" : pol.allowed === false ? "Not allowed" : "Unconfirmed", verdict[1])),
+        h("p", { text: pol.why, style: "max-width:46rem" }),
+        h("div", { class: "label", text: "What every patient gets the day after a visit" }),
+        h("div", { class: "msg sent" }, h("div", { class: "meta small" }, h("b", { text: E.messageLabel(state, sampleMsg) })), h("div", { class: "text", text: E.messageText(state, sampleMsg) })),
+        h("div", { class: "label", text: "Rules built into the system" }),
+        h("ul", { class: "plain" },
+          h("li", { text: "Every patient gets the same message. Nobody is picked because they seemed happy." }),
+          h("li", { text: "No discount, gift or other reward for a review." }),
+          h("li", { text: "The message says nothing about the treatment." }),
+          h("li", { text: "The system never writes a review, and never posts on a patient's behalf." }),
+          h("li", { text: "Where requests are off, patients are asked for private feedback that only the clinic sees." })),
+        h("p", { class: "muted small", text: "Rule summaries are from news and law-firm reports as of November 2026. Check the regulator's own text before switching this on for a real clinic." })];
+    },
+    sheet: function () {
+      var s = E.stats(state), today = E.iso(state.now);
+      function tile(n, label, attn) { return h("div", { class: "tile" + (attn && n ? " attn" : "") }, h("span", { class: "n", text: n }), h("span", { class: "small muted", text: label })); }
+      var list = h("div", { class: "rows" });
+      state.appointments.filter(function (a) { return E.iso(a.start) === today && a.status !== "cancelled"; })
+        .sort(function (a, b) { return a.start - b.start; }).forEach(function (a) {
+          var st = { booked: ["Waiting", "acc"], seen: ["Seen", "good"], missed: ["Did not come", "bad"] }[a.status];
+          list.append(h("div", { class: "row" }, h("span", null, h("span", { class: "mono", text: E.nice12(E.hm(a.start)) + "  " }), h("b", { text: a.name }), " · " + a.reason), pill(st[0], st[1])));
+        });
+      var out = [h("div", { class: "label", text: "The doctor's sheet for " + E.niceDay(today, state.now).replace(/^today, /, "") }),
+        h("div", { class: "tiles" }, tile(s.today, "patients today"), tile(s.seen, "seen so far"), tile(s.byAssistant, "booked by the assistant today"),
+          tile(s.afterHours, "calls caught after hours"), tile(s.followupsDue, "follow-ups due this week"), tile(s.followupsOverdue, "follow-ups overdue", true),
+          tile(s.missed, "did not come", true), tile(s.sentToday, "messages sent today")),
+        h("h3", { text: "Today's list" }), list];
+      if (state.notes.length) {
+        var notes = h("div", { class: "rows" });
+        state.notes.forEach(function (n) { notes.append(h("div", { class: "row" }, h("span", null, h("b", { text: n.name }), n.phone ? " · " + n.phone : ""), pill("Call back", "warn"), h("span", { class: "sub", text: n.note }))); });
+        out.push(h("h3", { text: "Messages for the staff" }), notes);
+      }
+      return out;
+    },
+    services: function () {
+      var items = [
+        ["A receptionist that never misses a call", "Answers the clinic's phone and WhatsApp day and night, books and changes appointments, and passes anything clinical to a person. Try it in the Call tab."],
+        ["Reminders that cut no-shows", "A confirmation when the visit is booked and a reminder before it. Patients confirm or change the time by replying. See Messages."],
+        ["Follow-ups the doctor asked for", "When the doctor says \"come back in two weeks\", the patient is reminded and rebooked. Missed visits get a new time offered. See Follow-ups."],
+        ["Post-visit check", "The day after a procedure the patient is asked how they are. A reply asking for help reaches the clinic at once."],
+        ["Reviews, where the rules allow", "The same polite request to every patient, with no reward. Switched off in countries that bar it, with private feedback instead. See Reviews."],
+        ["One sheet a day for the doctor", "Patients seen, who did not come, follow-ups due, calls caught after hours. See Daily sheet."]
+      ];
+      var grid = h("div", { class: "services" });
+      items.forEach(function (it) { grid.append(h("div", { class: "service" }, h("h3", { text: it[0] }), h("p", { class: "small", text: it[1] }))); });
+      return [h("div", { class: "label", text: "What we set up for a clinic" }), grid,
+        h("p", { class: "muted small", text: "The assistant handles appointments and questions about the clinic. It does not diagnose, suggest medicines or give medical advice." })];
+    }
+  };
+
+  // ---------------------------------------------------------------- the clock
+  function move(minutes) {
+    var ev = E.advance(state, minutes);
+    var box = $("events");
+    box.replaceChildren(h("span", { class: "label", text: "What the system just did by itself" }));
+    (ev.length ? ev : ["Nothing was due in that time."]).slice(0, 8).forEach(function (e) { box.append(h("span", { text: e })); });
+    box.hidden = false;
+    renderAll();
+  }
+  $("plusHour").addEventListener("click", function () { move(60); });
+  $("nextMorning").addEventListener("click", function () {
+    var t = E.at(E.addDays(E.iso(state.now), 1), "09:30");
+    move(Math.round((t - state.now) / 60000));
+  });
+  $("reset").addEventListener("click", function () { stopSpeaking(); boot(); });
+
+  boot();
+  setBrain();
+
+  // light up what this viewer's Claude offers; the page works without any of it
+  (async function () {
+    if (!window.claude || !window.claude.use) return;
+    try {
+      sample = await window.claude.use("sample");
+      if (sample) {
+        var lim = await sample.limits().catch(function () { return null; });
+        canTools = !!(lim && lim.tools);
+        useClaude = canTools; setBrain();
+      }
+    } catch (e) { /* stay scripted */ }
+    try { tts = await window.claude.use("tts"); } catch (e) { tts = null; }
+    if (tts || window.speechSynthesis) $("voiceWrap").hidden = false;
+    try { dict = await window.claude.use("dictation"); if (dict) wireDictation(); } catch (e) { dict = null; }
+  })();
+  if (window.speechSynthesis) $("voiceWrap").hidden = false;
+})();
+</script>

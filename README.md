@@ -1,67 +1,70 @@
 # Clinic Growth
 
-Lead collection for selling front-desk and follow-up automation to doctors'
-clinics, dental clinics and other small practices. Separate from the Plant
-Parlour and agency projects; shares no code or data with them.
+Front-desk and follow-up automation for doctors' clinics and dental clinics, and
+the lead finder to sell it. Separate from WorldReach, Plant Parlour and the
+agency projects; it shares no data with them.
 
-- What to sell and what the rules allow: [docs/STRATEGY.md](docs/STRATEGY.md)
-- Python 3.11+, standard library only (`openpyxl` only if you want `.xlsx`).
+| Part | What it is | State |
+|---|---|---|
+| **Demo** (`demo/`) | The product on invented patients: an AI receptionist you can talk to, the appointment diary, reminders, doctor-advised follow-ups, review rules by country, the doctor's daily sheet. Published as the "Clinic Front Desk" page. | Works. Logic covered by 10 tests; the page was run in a browser with the scripted receptionist. The Claude voice path only runs inside the published page. |
+| **Lead finder** (`leadgen/`) | The WorldReach lead finder, copied here: open map data (Overture Maps, OpenStreetMap), each practice's own website, e-mail hunt, Google Sheet. Set up for 8 kinds of medical practice in 27 capital cities. | 97 tests pass. **Never run live for clinics yet.** |
+| **Consultant tools** (`clinicleads/`) | Finds hospital doctors who run their own clinic, and reads the US clinician registry. | 8 tests pass. Never run live. |
 
-**Status, 11 Nov 2026:** the code passes 17 offline tests on invented data. It
-has never completed a live run: the session it was written in could not reach any
-of the data sources. No real leads have been collected yet. The first run on an
-open network is the real test.
+| Read | For |
+|---|---|
+| [docs/SERVICES.md](docs/SERVICES.md) | the list of services to pitch, and what each needs to go live |
+| [docs/STRATEGY.md](docs/STRATEGY.md) | what to sell where, prices, and the rules (reviews are off in India) |
 
-## Run it (tablet or any computer)
+## The demo
+
+Open the published page, or locally: put `demo/index.html` and `demo/engine.js`
+in one folder and open the HTML file. Tests: `node --test demo/engine.test.js`
+
+- Talk to the receptionist as a patient; the booking appears in the Diary.
+- "+1 hour" and "Next morning" move the demo clock, and the system sends what
+  is due by itself.
+- Reviews: change the country to see the request switch on or off.
+
+Inside Claude the receptionist is Claude itself and can listen and speak (in
+Chrome or the desktop app). Anywhere else a simple scripted receptionist answers.
+
+## Finding leads (tablet or any computer with open internet)
 
 ```bash
-cd clinic-growth
-python -m unittest discover -s tests -t .          # should say OK
-
-python -m clinicleads collect --city "Kolkata" --city "New Delhi"
-python -m clinicleads collect --country IN          # every Indian capital in the list
-python -m clinicleads collect --all                 # all 38 cities, about 10 minutes
-python -m clinicleads npi --city Washington --state DC   # US clinicians, public registry
-
-python -m clinicleads enrich --limit 300            # read clinics' own sites for emails
-python -m clinicleads stats
-python -m clinicleads export data/leads.xlsx --min-score 40
+pip install -r requirements.txt
+python -m clinicleads cities                   # the 27 cities
+python -m clinicleads find kolkata --no-sheets # one run = one half of the city; run again for the rest
+python -m clinicleads status kolkata
+python -m clinicleads export kolkata           # writes data/leads-kolkata.csv
 ```
 
-Cities live in `config/cities.csv`; add a row to add a city. The `review_offer`
-column records whether a review-request service may be pitched there
-(`restricted`, `allowed-with-rules`, or `check` = not yet researched).
+Leave out `--no-sheets` to write to a Google Sheet (same setup as WorldReach:
+`WR_SHEET_ID` and the service-account key). A lead needs a phone, e-mail or
+WhatsApp number to qualify. Every contact keeps the page it came from; nothing
+is guessed.
 
-## Where the leads come from
+Add a city: add a row to `config/cities.csv`, then `python scripts/make_markets.py`.
+The category codes in `config/shared/categories.toml` were written from memory;
+check the counts per category after the first real run.
 
-| Source | Covers | Gives |
-|---|---|---|
-| OpenStreetMap (Overpass) | every city | clinics, dentists, doctors, hospitals; phone/site/email where published |
-| US NPI Registry | United States | each licensed clinician, practice address and phone |
-| The clinic's own website | any lead with a site | emails, phones, WhatsApp links, only where robots.txt allows |
+### Hospital doctors with their own practice
 
-Every lead keeps the URL it came from. Nothing is guessed or filled in by a
-model. OpenStreetMap is thin in parts of India; if a city comes back small, the
-Overture Maps source used in Plant Parlour v2 is the next provider to add.
+```bash
+python -m clinicleads hospitals kolkata                       # hospitals found, with websites
+# read each hospital's "our doctors" page into rosters/kolkata.csv:
+#   doctor_name,specialty,hospital,source_url
+python -m clinicleads consultants kolkata rosters/kolkata.csv # writes data/consultants-kolkata.csv
+python -m clinicleads npi Washington DC                       # US: clinicians filing more than one practice
+```
 
-## Hospital doctors with their own practice
+A clinic named after a rostered doctor is a candidate: `strong` when first name
+and surname both match, `weak` on surname and initial. Two doctors can share a
+name, so confirm each one before contact.
 
-1. `python -m clinicleads hospitals` lists the hospitals found, with websites.
-2. Read each hospital's "our doctors" page into a roster file shaped like
-   `rosters/EXAMPLE.csv`. This is the slow manual part; Claude can do it in a
-   session that is allowed to open those sites.
-3. `python -m clinicleads crossmatch rosters/kolkata.csv` marks clinics named
-   after a rostered doctor. `strong` = first name and surname both match;
-   `weak` = surname and initial. Two doctors can share a name, so confirm each
-   match before contacting anyone.
-4. `python -m clinicleads export data/consultants.csv --consultants`
+## Never in git
 
-For the US, the `npi` command flags clinicians who file more than one practice
-location, which is the same signal.
+This repository is public. Lead data, rosters, patient data, keys and settings
+stay out of it (`.gitignore`).
 
-## Score
-
-0-100, with the reasons written next to it: phone +25, email +20, website +15,
-owner-named practice +15, high-value specialty +15, hospital consultant with own
-practice +15, hours listed +5, WhatsApp link +5, chain -30, no contact route -20.
-Hospitals are kept only as roster sources and always score 0.
+Contains data from the Overture Maps Foundation (CDLA-Permissive-2.0) and
+© OpenStreetMap contributors (ODbL) once the lead finder has run.
