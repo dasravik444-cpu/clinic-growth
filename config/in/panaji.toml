@@ -1,0 +1,13 @@
+# Panaji (India). Shared settings: _base.toml. Made by scripts/make_markets.py from config/cities.csv.
+include = ["../shared/categories.toml", "_base.toml"]
+
+[campaign]
+id = "in-panaji"
+timezone = "Asia/Kolkata"
+lead_id_prefix = "GOI"
+
+[area]
+name = "Panaji"
+aliases = ["Panjim", "Goa"]
+center = [15.4909, 73.8278]
+radius_km = 10

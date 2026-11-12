@@ -1,0 +1,13 @@
+# Kolkata (India). Shared settings: _base.toml. Made by scripts/make_markets.py from config/cities.csv.
+include = ["../shared/categories.toml", "_base.toml"]
+
+[campaign]
+id = "in-kolkata"
+timezone = "Asia/Kolkata"
+lead_id_prefix = "CCU"
+
+[area]
+name = "Kolkata"
+aliases = ["Calcutta", "Salt Lake", "Howrah", "New Town"]
+center = [22.5726, 88.3639]
+radius_km = 20

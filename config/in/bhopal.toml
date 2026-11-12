@@ -1,0 +1,13 @@
+# Bhopal (India). Shared settings: _base.toml. Made by scripts/make_markets.py from config/cities.csv.
+include = ["../shared/categories.toml", "_base.toml"]
+
+[campaign]
+id = "in-bhopal"
+timezone = "Asia/Kolkata"
+lead_id_prefix = "BHO"
+
+[area]
+name = "Bhopal"
+aliases = []
+center = [23.2599, 77.4126]
+radius_km = 15

@@ -1,0 +1,13 @@
+# Wellington (New Zealand). Shared settings: _base.toml. Made by scripts/make_markets.py from config/cities.csv.
+include = ["../shared/categories.toml", "_base.toml"]
+
+[campaign]
+id = "nz-wellington"
+timezone = "Pacific/Auckland"
+lead_id_prefix = "WLG"
+
+[area]
+name = "Wellington"
+aliases = ["Lower Hutt", "Porirua"]
+center = [-41.2866, 174.7756]
+radius_km = 15

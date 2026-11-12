@@ -1,16 +1,19 @@
 """Find hospital consultants who also run their own practice.
 
-Input: a roster CSV (doctor_name, specialty, hospital, city, source_url) read from
-hospitals' public "our doctors" pages, and the clinics already collected for the
-same city. A clinic named after a rostered doctor ("Dr Anita Rao's Skin Clinic")
-is a candidate. Every candidate is a suggestion for a human to confirm - two
-doctors can share a name.
+Input: a roster CSV (doctor_name, specialty, hospital, source_url) read from a hospital's public
+"our doctors" page, and the lead finder's export for the same city. A clinic named after a rostered
+doctor ("Dr Anita Rao's Skin Clinic") is a candidate. Every candidate is a suggestion for a human
+to confirm - two doctors can share a name.
 """
 from __future__ import annotations
 
 import csv
 
-from .model import Lead, norm_text, person_tokens
+from .model import norm_text, person_tokens
+
+HOSPITAL_LABEL = "Hospital (roster source)"
+ROSTER_COLUMNS = ["doctor_name", "specialty", "hospital", "source_url"]
+EXTRA_COLUMNS = ["Consultant Match", "Hospital Doctor", "Hospital", "Hospital Specialty", "Roster Source"]
 
 # Too common to match on surname + initial alone.
 COMMON = {
@@ -21,9 +24,13 @@ COMMON = {
 }
 
 
+def read_csv(path: str) -> list[dict]:
+    with open(path, newline="", encoding="utf-8-sig") as f:
+        return list(csv.DictReader(f))
+
+
 def load_roster(path: str) -> list[dict]:
-    with open(path, newline="", encoding="utf-8") as f:
-        return [r for r in csv.DictReader(f) if (r.get("doctor_name") or "").strip()]
+    return [r for r in read_csv(path) if (r.get("doctor_name") or "").strip()]
 
 
 def match_strength(doctor: str, clinic_text: str) -> str:
@@ -43,33 +50,39 @@ def match_strength(doctor: str, clinic_text: str) -> str:
     return ""
 
 
-def crossmatch(roster: list[dict], leads: list[Lead]) -> list[tuple[Lead, dict, str]]:
-    """Return (clinic lead, roster row, strength). Hospitals are never matched."""
-    hits = []
-    for row in roster:
-        city = norm_text(row.get("city", ""))
-        hospital = norm_text(row.get("hospital", ""))
-        for lead in leads:
-            if lead.kind == "hospital":
-                continue
-            if city and norm_text(lead.city) != city:
-                continue
-            text = f"{lead.name} {lead.operator}"
+def hospitals(leads: list[dict]) -> list[dict]:
+    return [r for r in leads if r.get("Category") == HOSPITAL_LABEL]
+
+
+def crossmatch(roster: list[dict], leads: list[dict]) -> list[dict]:
+    """Lead rows (never hospitals) named after a rostered doctor, with the evidence added."""
+    out = []
+    for lead in leads:
+        if lead.get("Category") == HOSPITAL_LABEL:
+            continue
+        text = f"{lead.get('Business Name', '')} {lead.get('Contact Person', '')}"
+        best = None
+        for row in roster:
+            hospital = norm_text(row.get("hospital", ""))
             if hospital and hospital in norm_text(text):
                 continue        # the hospital's own department, not a private practice
             strength = match_strength(row["doctor_name"], text)
-            if strength:
-                hits.append((lead, row, strength))
-    return hits
+            if strength and (best is None or (strength == "strong" and best[0] == "weak")):
+                best = (strength, row)
+        if best:
+            strength, row = best
+            out.append({**lead, "Consultant Match": strength,
+                        "Hospital Doctor": row["doctor_name"].strip(),
+                        "Hospital": (row.get("hospital") or "").strip(),
+                        "Hospital Specialty": (row.get("specialty") or "").strip(),
+                        "Roster Source": (row.get("source_url") or "").strip()})
+    out.sort(key=lambda r: r["Consultant Match"] != "strong")
+    return out
 
 
-def apply(roster: list[dict], leads: list[Lead]) -> int:
-    """Write the evidence onto matched leads. Returns the number matched."""
-    n = 0
-    for lead, row, strength in crossmatch(roster, leads):
-        lead.consultant_match = (
-            f"{strength}: {row['doctor_name'].strip()} ({row.get('specialty', '').strip()}) "
-            f"at {row.get('hospital', '').strip()} - {row.get('source_url', '').strip()}"
-        )
-        n += 1
-    return n
+def write_csv(rows: list[dict], path: str, columns: list[str]) -> int:
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=columns, extrasaction="ignore")
+        w.writeheader()
+        w.writerows(rows)
+    return len(rows)

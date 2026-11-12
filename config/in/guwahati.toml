@@ -1,0 +1,13 @@
+# Guwahati (India). Shared settings: _base.toml. Made by scripts/make_markets.py from config/cities.csv.
+include = ["../shared/categories.toml", "_base.toml"]
+
+[campaign]
+id = "in-guwahati"
+timezone = "Asia/Kolkata"
+lead_id_prefix = "GAU"
+
+[area]
+name = "Guwahati"
+aliases = ["Dispur"]
+center = [26.1445, 91.7362]
+radius_km = 12

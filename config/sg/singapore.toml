@@ -1,0 +1,13 @@
+# Singapore (Singapore). Shared settings: _base.toml. Made by scripts/make_markets.py from config/cities.csv.
+include = ["../shared/categories.toml", "_base.toml"]
+
+[campaign]
+id = "sg-singapore"
+timezone = "Asia/Singapore"
+lead_id_prefix = "SIN"
+
+[area]
+name = "Singapore"
+aliases = []
+center = [1.3521, 103.8198]
+radius_km = 20

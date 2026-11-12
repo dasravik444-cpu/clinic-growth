@@ -1,0 +1,13 @@
+# Canberra (Australia). Shared settings: _base.toml. Made by scripts/make_markets.py from config/cities.csv.
+include = ["../shared/categories.toml", "_base.toml"]
+
+[campaign]
+id = "au-canberra"
+timezone = "Australia/Sydney"
+lead_id_prefix = "CBR"
+
+[area]
+name = "Canberra"
+aliases = ["Belconnen", "Woden", "Queanbeyan"]
+center = [-35.2809, 149.1300]
+radius_km = 20

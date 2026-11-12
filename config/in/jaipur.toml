@@ -1,0 +1,13 @@
+# Jaipur (India). Shared settings: _base.toml. Made by scripts/make_markets.py from config/cities.csv.
+include = ["../shared/categories.toml", "_base.toml"]
+
+[campaign]
+id = "in-jaipur"
+timezone = "Asia/Kolkata"
+lead_id_prefix = "JAI"
+
+[area]
+name = "Jaipur"
+aliases = []
+center = [26.9124, 75.7873]
+radius_km = 15

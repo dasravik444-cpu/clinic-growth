@@ -1,0 +1,13 @@
+# London (United Kingdom). Shared settings: _base.toml. Made by scripts/make_markets.py from config/cities.csv.
+include = ["../shared/categories.toml", "_base.toml"]
+
+[campaign]
+id = "gb-london"
+timezone = "Europe/London"
+lead_id_prefix = "LON"
+
+[area]
+name = "London"
+aliases = ["Greater London", "Westminster", "Camden", "Hackney", "Southwark"]
+center = [51.5074, -0.1278]
+radius_km = 20

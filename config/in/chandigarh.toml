@@ -1,0 +1,13 @@
+# Chandigarh (India). Shared settings: _base.toml. Made by scripts/make_markets.py from config/cities.csv.
+include = ["../shared/categories.toml", "_base.toml"]
+
+[campaign]
+id = "in-chandigarh"
+timezone = "Asia/Kolkata"
+lead_id_prefix = "IXC"
+
+[area]
+name = "Chandigarh"
+aliases = ["Mohali", "Panchkula"]
+center = [30.7333, 76.7794]
+radius_km = 15

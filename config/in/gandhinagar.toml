@@ -1,0 +1,13 @@
+# Gandhinagar (India). Shared settings: _base.toml. Made by scripts/make_markets.py from config/cities.csv.
+include = ["../shared/categories.toml", "_base.toml"]
+
+[campaign]
+id = "in-gandhinagar"
+timezone = "Asia/Kolkata"
+lead_id_prefix = "GNR"
+
+[area]
+name = "Gandhinagar"
+aliases = []
+center = [23.2156, 72.6369]
+radius_km = 12

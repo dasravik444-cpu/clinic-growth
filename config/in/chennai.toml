@@ -1,0 +1,13 @@
+# Chennai (India). Shared settings: _base.toml. Made by scripts/make_markets.py from config/cities.csv.
+include = ["../shared/categories.toml", "_base.toml"]
+
+[campaign]
+id = "in-chennai"
+timezone = "Asia/Kolkata"
+lead_id_prefix = "MAA"
+
+[area]
+name = "Chennai"
+aliases = ["Madras", "Adyar", "Anna Nagar"]
+center = [13.0827, 80.2707]
+radius_km = 20

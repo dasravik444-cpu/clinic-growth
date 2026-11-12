@@ -1,0 +1,13 @@
+# Washington (United States). Shared settings: _base.toml. Made by scripts/make_markets.py from config/cities.csv.
+include = ["../shared/categories.toml", "_base.toml"]
+
+[campaign]
+id = "us-washington-dc"
+timezone = "America/New_York"
+lead_id_prefix = "WAS"
+
+[area]
+name = "Washington"
+aliases = ["Washington DC", "DC", "Arlington VA", "Alexandria", "Bethesda"]
+center = [38.9072, -77.0369]
+radius_km = 20

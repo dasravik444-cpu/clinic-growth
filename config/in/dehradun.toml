@@ -1,0 +1,13 @@
+# Dehradun (India). Shared settings: _base.toml. Made by scripts/make_markets.py from config/cities.csv.
+include = ["../shared/categories.toml", "_base.toml"]
+
+[campaign]
+id = "in-dehradun"
+timezone = "Asia/Kolkata"
+lead_id_prefix = "DED"
+
+[area]
+name = "Dehradun"
+aliases = []
+center = [30.3165, 78.0322]
+radius_km = 12

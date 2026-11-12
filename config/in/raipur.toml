@@ -1,0 +1,13 @@
+# Raipur (India). Shared settings: _base.toml. Made by scripts/make_markets.py from config/cities.csv.
+include = ["../shared/categories.toml", "_base.toml"]
+
+[campaign]
+id = "in-raipur"
+timezone = "Asia/Kolkata"
+lead_id_prefix = "RPR"
+
+[area]
+name = "Raipur"
+aliases = []
+center = [21.2514, 81.6296]
+radius_km = 12

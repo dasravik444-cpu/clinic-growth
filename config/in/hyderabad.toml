@@ -1,0 +1,13 @@
+# Hyderabad (India). Shared settings: _base.toml. Made by scripts/make_markets.py from config/cities.csv.
+include = ["../shared/categories.toml", "_base.toml"]
+
+[campaign]
+id = "in-hyderabad"
+timezone = "Asia/Kolkata"
+lead_id_prefix = "HYD"
+
+[area]
+name = "Hyderabad"
+aliases = ["Secunderabad", "Banjara Hills", "Gachibowli"]
+center = [17.3850, 78.4867]
+radius_km = 22

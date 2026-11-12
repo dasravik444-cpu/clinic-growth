@@ -1,0 +1,13 @@
+# Abu Dhabi (United Arab Emirates). Shared settings: _base.toml. Made by scripts/make_markets.py from config/cities.csv.
+include = ["../shared/categories.toml", "_base.toml"]
+
+[campaign]
+id = "ae-abu-dhabi"
+timezone = "Asia/Dubai"
+lead_id_prefix = "AUH"
+
+[area]
+name = "Abu Dhabi"
+aliases = ["Khalifa City", "Al Reem"]
+center = [24.4539, 54.3773]
+radius_km = 25

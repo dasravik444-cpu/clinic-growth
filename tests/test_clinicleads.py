@@ -1,228 +1,136 @@
-"""Offline tests. Every place and person here is invented."""
-import json
+"""Offline tests of the clinic layer. Every place and person here is invented."""
+import csv
+import glob
 import os
-import tempfile
-import unittest
 
 from clinicleads import crossmatch as cm
-from clinicleads import enrich, npi, overpass, store
-from clinicleads.cli import load_cities, main
-from clinicleads.model import Lead, is_chain, is_owner_named, person_tokens, score
-from clinicleads.net import FetchError
+from clinicleads import npi
+from clinicleads.cli import city_config, paths
+from clinicleads.model import is_owner_named, person_tokens
+from leadgen.config import load_config
+from leadgen.db import DB
+from leadgen.providers.overture import OvertureStore
 
-HERE = os.path.dirname(__file__)
-DELHI = {"city": "New Delhi", "country": "India", "cc": "IN", "lat": "28.6139",
-         "lon": "77.2090", "radius_km": "25", "review_offer": "restricted"}
-
-
-def sample():
-    with open(os.path.join(HERE, "fixtures", "overpass_sample.json")) as f:
-        return overpass.parse(json.load(f), DELHI, "2026-01-01T00:00:00Z")
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+KOLKATA = (22.5726, 88.3639)
 
 
-class Overpass(unittest.TestCase):
-    def test_query_shape(self):
-        q = overpass.build_query(28.6139, 77.209, 25)
-        self.assertIn("(around:25000,28.6139,77.209)", q)
-        self.assertTrue(q.startswith("[out:json]") and q.endswith("out center tags;"))
-        self.assertEqual(q.count("("), q.count(")"))
-
-    def test_parse_skips_unnamed_and_reads_tags(self):
-        leads = sample()
-        self.assertEqual(len(leads), 6)                     # the unnamed node is dropped
-        d = leads[0]
-        self.assertEqual((d.kind, d.phone, d.address), ("dentist", "+91 11 5550 0101", "12 Sample Marg, New Delhi"))
-        self.assertEqual(d.source_url, "https://www.openstreetmap.org/node/1001")
-        skin = next(l for l in leads if l.source_id == "way/2001")
-        self.assertEqual((skin.lat, skin.email, skin.specialty), (28.64, "hello@fictionrao.example", "dermatology"))
-        self.assertEqual(next(l for l in leads if "Hospital" in l.name).kind, "hospital")
-        self.assertEqual(d.review_offer, "restricted")
-
-    def test_falls_back_to_next_server(self):
-        calls = []
-
-        def fake(url, data=None, **kw):
-            calls.append(url)
-            if len(calls) == 1:
-                raise FetchError("down")
-            return {"elements": []}
-        orig, overpass.fetch_json = overpass.fetch_json, fake
-        try:
-            self.assertEqual(overpass.collect(DELHI, endpoints=["a", "b"]), [])
-            with self.assertRaises(FetchError):
-                calls.clear()
-                overpass.fetch_json = lambda *a, **k: (_ for _ in ()).throw(FetchError("down"))
-                overpass.collect(DELHI, endpoints=["a", "b"])
-        finally:
-            overpass.fetch_json = orig
+def test_every_city_in_the_list_has_a_config_that_loads():
+    with open(os.path.join(ROOT, "config", "cities.csv"), newline="") as f:
+        cities = list(csv.DictReader(f))
+    assert len(cities) == 27 and len({c["slug"] for c in cities}) == 27
+    for c in cities:
+        assert c["review_offer"] in ("restricted", "allowed-with-rules", "check")
+        cfg = load_config(city_config(c["slug"]))
+        assert cfg["campaign"]["country"] == c["cc"]
+        assert cfg["area"]["center"] == [float(c["lat"]), float(c["lon"])]
+        assert cfg["crawler"]["bot_name"] == "ClinicGrowthBot"
+        assert cfg["compliance"]["mode"] == "open-data"
+        assert [k["key"] for k in cfg["categories"]][-1] == "hospital"
+    assert len([p for p in glob.glob(os.path.join(ROOT, "config", "??", "*.toml")) if "_base" not in p]) == 27
 
 
-class Scoring(unittest.TestCase):
-    def test_names(self):
-        self.assertTrue(is_owner_named("Dr. Mehta's Clinic"))
-        self.assertFalse(is_owner_named("Drishti Eye Centre"))
-        self.assertTrue(is_chain("Apollo Clinic Saket"))
-        self.assertFalse(is_chain("Appollonia Dental"))
-        self.assertEqual(person_tokens("Prof. Dr. Anita K. Rao, MBBS, MD"), ["anita", "k", "rao"])
-
-    def test_score_orders_sensibly(self):
-        leads = {l.source_id: score(l) for l in sample()}
-        dentist, chain, hospital = leads["node/1001"], leads["node/1003"], leads["way/2002"]
-        self.assertGreater(dentist.score, chain.score)
-        self.assertEqual(hospital.score, 0)
-        self.assertIn("owner-named", dentist.score_reasons)
-        self.assertIn("high-value", dentist.score_reasons)
-        self.assertIn("chain", chain.score_reasons)
-        plain = score(Lead("t", "1", name="President Student Residency Clinic"))
-        self.assertNotIn("high-value", plain.score_reasons)   # 'dent' inside a word is not dental
-        self.assertIn("high-value", score(Lead("t", "2", name="City ENT Centre", phone="1")).score_reasons)
+def test_each_city_keeps_its_own_database_and_export():
+    cfg, db, out = paths("new-delhi")
+    assert cfg.endswith("config/in/new-delhi.toml")
+    assert db.endswith("state/in-new-delhi.sqlite") and out.endswith("data/leads-new-delhi.csv")
 
 
-class Store(unittest.TestCase):
-    def test_dedupe_keeps_richer_copy(self):
-        kept = store.dedupe(sample())
-        same = [l for l in kept if "Testwala" in l.name]
-        self.assertEqual(len(same), 1)
-        self.assertTrue(same[0].phone)
-
-    def test_same_name_far_apart_is_kept(self):
-        a = Lead("osm", "n/1", name="Smile Dental", cc="IN", lat=28.60, lon=77.20)
-        b = Lead("osm", "n/2", name="Smile Dental", cc="IN", lat=28.70, lon=77.30)
-        self.assertEqual(len(store.dedupe([a, b])), 2)
-
-    def test_save_load_export(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            db = store.connect(os.path.join(tmp, "t.sqlite"))
-            store.save(db, store.dedupe(sample()))
-            store.save(db, store.dedupe(sample()))                 # second run must not duplicate
-            leads = store.load(db, "kind != 'hospital'")
-            self.assertEqual(len(leads), 4)
-            for ext in ("csv", "xlsx"):
-                out = os.path.join(tmp, f"o.{ext}")
-                self.assertEqual(store.export(leads, out), 4)
-                self.assertGreater(os.path.getsize(out), 100)
-            with open(os.path.join(tmp, "o.csv")) as f:
-                first = f.readlines()[1]
-            self.assertIn("Testwala", first)                       # best lead first
+def place(i, name, code, dlat=0.0, **kw):
+    return {"id": f"08f{i:013d}", "name": name, "lat": KOLKATA[0] + dlat, "lng": KOLKATA[1], "code": code,
+            "basic": kw.get("basic", code), "alternates": [], "phones": kw.get("phones", [f"+91 98300 1{i:04d}"]),
+            "emails": [], "websites": [], "socials": [], "street": f"{i} Test Road", "locality": "Salt Lake",
+            "postcode": "700091", "confidence": 0.8, "brand": kw.get("brand"), "status": None, "datasets": ["meta"]}
 
 
-class Crossmatch(unittest.TestCase):
-    ROSTER = [
-        {"doctor_name": "Dr. Anita Fictionrao, MD", "specialty": "Dermatology",
-         "hospital": "Sample General Hospital", "city": "New Delhi", "source_url": "https://sgh.example/doctors"},
-        {"doctor_name": "Dr. Raj Kumar", "specialty": "Medicine",
-         "hospital": "Sample General Hospital", "city": "New Delhi", "source_url": ""},
-    ]
-
-    def test_strength(self):
-        self.assertEqual(cm.match_strength("Dr Anita Fictionrao", "Anita Fictionrao Skin Clinic"), "strong")
-        self.assertEqual(cm.match_strength("Dr Anita Fictionrao", "Dr A Fictionrao Clinic"), "weak")
-        self.assertEqual(cm.match_strength("Dr Raj Kumar", "Dr R Kumar Clinic"), "")      # common surname
-        self.assertEqual(cm.match_strength("Dr Anita Fictionrao", "Fictionrao Nagar Clinic"), "")
-        self.assertEqual(cm.match_strength("Madonna", "Madonna Clinic"), "")
-
-    def test_apply_marks_only_private_clinic(self):
-        leads = sample()
-        self.assertEqual(cm.apply(self.ROSTER, leads), 1)
-        hit = next(l for l in leads if l.consultant_match)
-        self.assertEqual(hit.source_id, "way/2001")
-        self.assertIn("Sample General Hospital", hit.consultant_match)
-        self.assertIn("hospital consultant", score(hit).score_reasons)
-
-    def test_other_city_and_hospital_department_ignored(self):
-        other = [dict(self.ROSTER[0], city="Mumbai")]
-        self.assertEqual(cm.apply(other, sample()), 0)
-        dept = Lead("osm", "n/9", name="Sample General Hospital - Dr Anita Fictionrao OPD", city="New Delhi")
-        self.assertEqual(cm.crossmatch(self.ROSTER, [dept]), [])
+def test_medical_categories_pick_practices_and_drop_the_rest(tmp_path):
+    cfg = load_config(city_config("kolkata"))
+    rows = [place(1, "Dr Testwala's Dental Care", "dentist"),
+            place(2, "Fictionrao Skin Clinic", "dermatologist", dlat=0.002),
+            place(3, "Sample General Hospital", "hospital", dlat=0.004),
+            place(4, "Corner Pharmacy", "pharmacy", dlat=0.006),
+            place(5, "Clove Dental Sample Nagar", "dentist", dlat=0.008)]
+    st = OvertureStore(DB(str(tmp_path / "s.sqlite")), cfg, fetcher=lambda *a: [dict(r) for r in rows],
+                       release_fn=lambda: "2026-09-23.1")
+    assert st.category_for("dentist", "dentist", "Any Dental") == "dental"
+    assert st.category_for("orthodontist", "dentist", "Brace Place") == "dental"
+    assert st.category_for("dermatologist", "doctor", "Skin Clinic") == "skin"
+    assert st.category_for("hospital", "hospital", "City Hospital") == "hospital"
+    assert st.category_for("pharmacy", "pharmacy", "Corner Pharmacy") is None
+    found = {c: {p.name for p in st.search_cell(KOLKATA[0], KOLKATA[1], 3.0, c)} for c in ("dental", "skin", "hospital")}
+    assert "Dr Testwala's Dental Care" in found["dental"]
+    assert found["skin"] == {"Fictionrao Skin Clinic"}
+    assert found["hospital"] == {"Sample General Hospital"}
 
 
-class Npi(unittest.TestCase):
-    PAYLOAD = {"result_count": 3, "results": [
-        {"number": 1000000001, "basic": {"first_name": "PAT", "last_name": "SAMPLE", "status": "A"},
-         "addresses": [{"address_purpose": "MAILING", "address_1": "PO BOX 1"},
-                       {"address_purpose": "LOCATION", "address_1": "100 TEST ST NW", "city": "WASHINGTON",
-                        "state": "DC", "postal_code": "200010000", "telephone_number": "202-555-0100"}],
-         "practiceLocations": [{"address_1": "5 OTHER AVE"}],
-         "taxonomies": [{"desc": "Dentist", "primary": True}]},
-        {"number": 1000000002, "basic": {"first_name": "LEE", "last_name": "DEMO", "status": "A"},
-         "addresses": [{"address_purpose": "LOCATION", "address_1": "1 UNIVERSITY HOSPITAL DR",
-                        "city": "WASHINGTON", "state": "DC", "postal_code": "20002"}],
-         "practiceLocations": [{"address_1": "x"}], "taxonomies": [{"desc": "Dermatology"}]},
-        {"number": 1000000003, "basic": {"first_name": "X", "last_name": "GONE", "status": "D"},
-         "addresses": [{"address_purpose": "LOCATION", "address_1": "1 A ST"}], "taxonomies": []},
-    ]}
-
-    def test_parse(self):
-        city = {"city": "Washington", "country": "United States", "cc": "US"}
-        leads = npi.parse(self.PAYLOAD, city, "Dentist", "2026-01-01T00:00:00Z")
-        self.assertEqual(len(leads), 2)                              # deactivated record dropped
-        a, b = leads
-        self.assertEqual((a.name, a.phone), ("Dr. Pat Sample", "202-555-0100"))
-        self.assertEqual(a.address, "100 Test St Nw, Washington, DC, 20001")
-        self.assertIn("2 practice locations", a.consultant_match)
-        self.assertEqual(b.consultant_match, "")                      # main address is a hospital
+def test_name_helpers():
+    assert is_owner_named("Dr. Mehta's Clinic") and not is_owner_named("Drishti Eye Centre")
+    assert person_tokens("Prof. Dr. Anita K. Rao, MBBS, MD") == ["anita", "k", "rao"]
 
 
-class Enrich(unittest.TestCase):
-    HOME = ('<a href="/contact-us">Contact</a> <a href="https://other.example/contact">x</a>'
-            '<img src="logo@2x.png"> <a href="tel:+91%2011%205550%200101">call</a>')
-    CONTACT = ('Write to <a href="mailto:frontdesk@clinic.example">us</a> or '
-               '<a href="https://wa.me/911155500101">WhatsApp</a> icon@2x.png')
-
-    def test_extract_and_links(self):
-        self.assertEqual(enrich.contact_links(self.HOME, "https://clinic.example/"),
-                         ["https://clinic.example/contact-us"])
-        got = enrich.extract(self.CONTACT)
-        self.assertEqual(got["emails"], ["frontdesk@clinic.example"])
-        self.assertEqual(got["whatsapp"], "911155500101")
-        self.assertEqual(enrich.extract(self.HOME)["phones"], ["+91 11 5550 0101"])
-
-    def test_enrich_fills_only_empty_fields(self):
-        pages = {"https://clinic.example": self.HOME, "https://clinic.example/contact-us": self.CONTACT}
-        lead = Lead("t", "1", name="C", website="clinic.example", phone="existing")
-        ok = enrich.enrich(lead, pause=0, fetcher=lambda u, **k: pages[u].encode(), allowed=lambda u: True)
-        self.assertTrue(ok)
-        self.assertEqual((lead.email, lead.phone, lead.whatsapp),
-                         ("frontdesk@clinic.example", "existing", "911155500101"))
-
-    def test_robots_refusal_means_no_fetch(self):
-        lead = Lead("t", "1", name="C", website="https://clinic.example")
-        boom = lambda u, **k: (_ for _ in ()).throw(AssertionError("must not fetch"))
-        self.assertFalse(enrich.enrich(lead, fetcher=boom, allowed=lambda u: False))
-        self.assertEqual(lead.email, "")
+def test_match_strength():
+    assert cm.match_strength("Dr Anita Fictionrao", "Anita Fictionrao Skin Clinic") == "strong"
+    assert cm.match_strength("Dr Anita Fictionrao", "Dr A Fictionrao Clinic") == "weak"
+    assert cm.match_strength("Dr Raj Kumar", "Dr R Kumar Clinic") == ""          # common surname
+    assert cm.match_strength("Dr Anita Fictionrao", "Fictionrao Nagar Clinic") == ""
+    assert cm.match_strength("Madonna", "Madonna Clinic") == ""
 
 
-class Cli(unittest.TestCase):
-    def test_city_config_is_valid(self):
-        cities = load_cities()
-        self.assertGreater(len(cities), 30)
-        for c in cities:
-            self.assertTrue(-90 <= float(c["lat"]) <= 90 and -180 <= float(c["lon"]) <= 180, c)
-            self.assertEqual(len(c["cc"]), 2)
-            self.assertIn(c["review_offer"], ("restricted", "allowed-with-rules", "check"))
-        self.assertEqual(len({c["city"] for c in cities}), len(cities))
-
-    def test_collect_export_end_to_end(self):
-        with open(os.path.join(HERE, "fixtures", "overpass_sample.json")) as f:
-            payload = json.load(f)
-        orig, overpass.fetch_json = overpass.fetch_json, lambda *a, **k: payload
-        try:
-            with tempfile.TemporaryDirectory() as tmp:
-                db, out = os.path.join(tmp, "l.sqlite"), os.path.join(tmp, "out.csv")
-                roster = os.path.join(tmp, "r.csv")
-                with open(roster, "w") as f:
-                    f.write("doctor_name,specialty,hospital,city,source_url\n"
-                            "Dr Anita Fictionrao,Dermatology,Sample General Hospital,New Delhi,https://sgh.example\n")
-                main(["--db", db, "collect", "--city", "New Delhi", "--pause", "0"])
-                main(["--db", db, "crossmatch", roster])
-                main(["--db", db, "export", out, "--consultants"])
-                with open(out) as f:
-                    lines = f.read().strip().splitlines()
-                self.assertEqual(len(lines), 2)
-                self.assertIn("Fictionrao", lines[1])
-        finally:
-            overpass.fetch_json = orig
+LEADS = [
+    {"Business Name": "Anita Fictionrao Skin Clinic", "Category": "Skin / Hair / Cosmetic clinic", "Phones": "1"},
+    {"Business Name": "Sunrise Dental", "Category": "Dental clinic", "Contact Person": "Dr V Inventedkar"},
+    {"Business Name": "Sample General Hospital", "Category": cm.HOSPITAL_LABEL, "Website": "https://sgh.example"},
+    {"Business Name": "Sample General Hospital - Dr Anita Fictionrao OPD", "Category": "Doctor's clinic"},
+    {"Business Name": "City Family Physicians", "Category": "Doctor's clinic"},
+]
+ROSTER = [
+    {"doctor_name": "Dr. Anita Fictionrao, MD", "specialty": "Dermatology", "hospital": "Sample General Hospital",
+     "source_url": "https://sgh.example/doctors"},
+    {"doctor_name": "Dr. Vikram Inventedkar", "specialty": "Dental Surgery", "hospital": "Sample General Hospital",
+     "source_url": "https://sgh.example/doctors"},
+    {"doctor_name": "Dr. Raj Kumar", "specialty": "Medicine", "hospital": "Sample General Hospital", "source_url": ""},
+]
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_crossmatch_finds_private_practices_only(tmp_path):
+    hits = cm.crossmatch(ROSTER, LEADS)
+    assert [(h["Business Name"], h["Consultant Match"]) for h in hits] == [
+        ("Anita Fictionrao Skin Clinic", "strong"), ("Sunrise Dental", "weak")]
+    assert hits[0]["Hospital"] == "Sample General Hospital" and hits[0]["Roster Source"].endswith("/doctors")
+    assert [h["Business Name"] for h in cm.hospitals(LEADS)] == ["Sample General Hospital"]
+    out = tmp_path / "c.csv"
+    assert cm.write_csv(hits, str(out), cm.EXTRA_COLUMNS + ["Business Name", "Phones"]) == 2
+    assert cm.read_csv(str(out))[0]["Hospital Doctor"] == "Dr. Anita Fictionrao, MD"
+
+
+def test_roster_file_round_trip(tmp_path):
+    p = tmp_path / "r.csv"
+    p.write_text("doctor_name,specialty,hospital,source_url\nDr A B,Skin,H,u\n,,,\n", encoding="utf-8")
+    assert len(cm.load_roster(str(p))) == 1
+
+
+NPI_PAYLOAD = {"result_count": 3, "results": [
+    {"number": 1000000001, "basic": {"first_name": "PAT", "last_name": "SAMPLE", "status": "A"},
+     "addresses": [{"address_purpose": "MAILING", "address_1": "PO BOX 1"},
+                   {"address_purpose": "LOCATION", "address_1": "100 TEST ST NW", "city": "WASHINGTON",
+                    "state": "DC", "postal_code": "200010000", "telephone_number": "202-555-0100"}],
+     "practiceLocations": [{"address_1": "5 OTHER AVE"}], "taxonomies": [{"desc": "Dentist", "primary": True}]},
+    {"number": 1000000002, "basic": {"first_name": "LEE", "last_name": "DEMO", "status": "A"},
+     "addresses": [{"address_purpose": "LOCATION", "address_1": "1 UNIVERSITY HOSPITAL DR", "city": "WASHINGTON",
+                    "state": "DC", "postal_code": "20002"}],
+     "practiceLocations": [{"address_1": "x"}], "taxonomies": [{"desc": "Dermatology"}]},
+    {"number": 1000000003, "basic": {"first_name": "X", "last_name": "GONE", "status": "D"},
+     "addresses": [{"address_purpose": "LOCATION", "address_1": "1 A ST"}], "taxonomies": []},
+]}
+
+
+def test_npi_parse_and_paging(monkeypatch):
+    a, b = npi.parse(NPI_PAYLOAD, "Dentist")                      # the deactivated record is dropped
+    assert (a["Name"], a["Phone"], a["Own Practice Signal"]) == ("Dr. Pat Sample", "202-555-0100", "yes")
+    assert a["Address"] == "100 Test St Nw, Washington, DC, 20001"
+    assert b["Own Practice Signal"] == ""                         # main address is a hospital
+    calls = []
+    monkeypatch.setattr(npi, "fetch_json", lambda url, **k: calls.append(url) or NPI_PAYLOAD)
+    rows = npi.collect("Washington", "DC", taxonomies=["Dentist", "Dermatology"], pause=0)
+    assert len(calls) == 2 and len(rows) == 2                     # same clinicians under two searches: kept once
+    assert "taxonomy_description=Dentist" in calls[0] and "state=DC" in calls[0]

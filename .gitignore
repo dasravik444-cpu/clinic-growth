@@ -1,5 +1,20 @@
-data/*.sqlite
-data/*.csv
-data/*.xlsx
+# Lead data, rosters, keys and settings never go into git (this repository is public)
+data/
+state/
+out/
+rosters/*.csv
+clinic-data/
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+.env
+settings.txt
+secrets/
+/*.json
+*.zip
+
 __pycache__/
 *.pyc
+.pytest_cache/
+.venv/

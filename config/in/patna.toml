@@ -1,0 +1,13 @@
+# Patna (India). Shared settings: _base.toml. Made by scripts/make_markets.py from config/cities.csv.
+include = ["../shared/categories.toml", "_base.toml"]
+
+[campaign]
+id = "in-patna"
+timezone = "Asia/Kolkata"
+lead_id_prefix = "PAT"
+
+[area]
+name = "Patna"
+aliases = []
+center = [25.5941, 85.1376]
+radius_km = 12

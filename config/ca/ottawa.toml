@@ -1,0 +1,13 @@
+# Ottawa (Canada). Shared settings: _base.toml. Made by scripts/make_markets.py from config/cities.csv.
+include = ["../shared/categories.toml", "_base.toml"]
+
+[campaign]
+id = "ca-ottawa"
+timezone = "America/Toronto"
+lead_id_prefix = "YOW"
+
+[area]
+name = "Ottawa"
+aliases = ["Gatineau", "Kanata", "Nepean"]
+center = [45.4215, -75.6972]
+radius_km = 20

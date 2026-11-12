@@ -1,0 +1,13 @@
+# New Delhi (India). Shared settings: _base.toml. Made by scripts/make_markets.py from config/cities.csv.
+include = ["../shared/categories.toml", "_base.toml"]
+
+[campaign]
+id = "in-new-delhi"
+timezone = "Asia/Kolkata"
+lead_id_prefix = "DEL"
+
+[area]
+name = "New Delhi"
+aliases = ["Delhi", "South Delhi", "Dwarka", "Saket"]
+center = [28.6139, 77.2090]
+radius_km = 25

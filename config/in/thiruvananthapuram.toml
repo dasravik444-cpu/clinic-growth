@@ -1,0 +1,13 @@
+# Thiruvananthapuram (India). Shared settings: _base.toml. Made by scripts/make_markets.py from config/cities.csv.
+include = ["../shared/categories.toml", "_base.toml"]
+
+[campaign]
+id = "in-thiruvananthapuram"
+timezone = "Asia/Kolkata"
+lead_id_prefix = "TRV"
+
+[area]
+name = "Thiruvananthapuram"
+aliases = ["Trivandrum"]
+center = [8.5241, 76.9366]
+radius_km = 12

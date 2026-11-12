@@ -1,0 +1,13 @@
+# Mumbai (India). Shared settings: _base.toml. Made by scripts/make_markets.py from config/cities.csv.
+include = ["../shared/categories.toml", "_base.toml"]
+
+[campaign]
+id = "in-mumbai"
+timezone = "Asia/Kolkata"
+lead_id_prefix = "BOM"
+
+[area]
+name = "Mumbai"
+aliases = ["Bombay", "Andheri", "Bandra", "Navi Mumbai"]
+center = [19.0760, 72.8777]
+radius_km = 25

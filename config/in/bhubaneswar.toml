@@ -1,0 +1,13 @@
+# Bhubaneswar (India). Shared settings: _base.toml. Made by scripts/make_markets.py from config/cities.csv.
+include = ["../shared/categories.toml", "_base.toml"]
+
+[campaign]
+id = "in-bhubaneswar"
+timezone = "Asia/Kolkata"
+lead_id_prefix = "BBI"
+
+[area]
+name = "Bhubaneswar"
+aliases = []
+center = [20.2961, 85.8245]
+radius_km = 12
