@@ -4,12 +4,25 @@ It runs in **Termux**, in its own small Ubuntu, next to your other robots (World
 India review robot). They are not touched: Clinic Growth has its own folder, its own memory, its own Google Sheet,
 and one command of its own: `cg`.
 
+## Accounts: keep this project apart from the others
+
+Make new accounts for Clinic Growth; share none with WorldReach or the other robots:
+
+| Account | What it is for |
+|---|---|
+| **1 new Google account** (the "admin" one) | Owns the Google Sheet and the Google Cloud project with the key file. It never sends e-mails, so a spam complaint can never touch your Sheet or key. |
+| **2 or 3 new Gmail accounts** | Only for writing to clinics. Each warms up by itself (50, 100, 200 a day ...). Give each a real name and photo, and send a few normal e-mails from it first. |
+| **1 Outlook account** (optional) | A fourth mailbox later; docs/OUTLOOK.md. |
+
+The key file for this project comes from the admin account: console.cloud.google.com → new project
+"clinic-growth" → APIs: enable "Google Sheets API" → Service accounts → Create → Keys → Add key → JSON.
+
 Have ready:
 
 | You need | Where it comes from |
 |---|---|
 | A new, empty **Google Sheet** | sheets.new in the browser. Name it "Clinic Growth". |
-| Your **Google key file** (.json) | The one you already use for the India robot works: Google Cloud Console → project `review-leads` → Service accounts → `sheet-writer` → Keys → Add key → JSON. |
+| Your **Google key file** (.json) | From the new admin account (above), not the one WorldReach uses. |
 | **2 or 3 mailboxes** | Gmail accounts with an app password each, and/or an Outlook address (docs/OUTLOOK.md). Use mailboxes made for this project: not your personal one, and not the ones WorldReach sends from (a spam complaint here would slow those down too). |
 | Your **business name** | What doctors should see as the sender, e.g. the name on your overview PDF. |
 | Your **postal address** | One line. Needed once you write to the US or Canada; fill it in anyway. |

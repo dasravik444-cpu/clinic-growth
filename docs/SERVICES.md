@@ -11,6 +11,7 @@ The list to walk a doctor through. Each service is shown working in the demo
 | 4 | **Post-visit check** | The day after a procedure the patient is asked how they are; a reply asking for help reaches the clinic at once. | Everywhere |
 | 5 | **Google reviews** | The same polite request to every patient the day after a visit, no reward, nothing about the treatment. | US and UK. **Not India, Australia or Singapore** (see STRATEGY.md); there patients get a private feedback question instead. Other countries: check first. |
 | 6 | **The doctor's daily sheet** | Patients seen, who did not come, follow-ups due and overdue, calls caught after hours, messages sent. | Everywhere |
+| 7 | **A website for the clinic** | A fast, clear site: doctors, timings, location, fees and a booking button. Set up and looked after for the clinic. | Everywhere |
 
 Other things the same system can do once a clinic is live, if a doctor asks:
 a waiting list that fills cancelled slots, a reminder to collect reports,
@@ -38,8 +39,30 @@ clinic means editing those facts, then testing with twenty or so pretend calls.
 
 | Service | Needs | State today |
 |---|---|---|
-| Voice calls | A phone number that forwards to a voice-AI service (speech in, speech out), connected to the booking tools | Demo only: talks in the browser, no phone line yet |
-| WhatsApp messages | The clinic's own number on the WhatsApp Business API, approved message templates, patient opt-in | Demo only: messages are shown, not sent |
-| E-mail messages | The clinic's mailbox (Gmail app password or Outlook sign-in, as in WorldReach) | Not built yet |
-| Diary | Either our own diary (as in the demo) or a link to the clinic's existing software | Demo diary only, kept in the page |
-| Patient data | A signed agreement with the clinic, consent wording at registration, storage in one protected place | Not started; required before any real patient is loaded |
+| Voice calls | A phone number that forwards to a voice-AI platform (speech in, speech out) given the clinic's facts and the booking tools. Indian platforms (Bolna, Ringg, Bolti and others) quote about Rs 4-8 a minute with Hindi and Bengali, plus about Rs 500 a month per number; vendor figures, unchecked. | Demo only: talks in the browser, no phone line yet |
+| WhatsApp messages | The clinic's own number on the WhatsApp Business API (through Meta or a provider), approved "utility" templates for reminders, patient opt-in. Reported cost about Rs 0.12 per reminder; vendor figure. | Not built: messages go by e-mail for now |
+| E-mail messages | The clinic's mailbox, or ours on its behalf (`cg clinic`) | **Built** (`clinicreach/patients.py`): reminders, follow-ups, rebooking, post-visit check, feedback; tested on a demo clinic, never sent to a real patient |
+| Diary | Either our own diary (as in the demo) or the clinic's export as `patients.csv` | The patient list is read from the clinic's export; no live link to clinic software |
+| Patient data | A signed agreement with the clinic, consent wording at registration, storage in one protected place | Consent column enforced; agreement not drafted yet; required before any real patient is loaded |
+| Website | A domain in the clinic's name and a host (GitHub Pages is free) | Not built yet |
+
+## Try the patient messages yourself (tablet)
+
+```
+cg clinic demo
+cg clinic preview demo
+cg clinic run demo --to yourown@gmail.com
+cg clinic sheet demo
+```
+
+The first line makes a demo clinic with 10 invented patients. The second shows what each would get. The
+third sends every one of those messages to your own address, marked TEST, so you see exactly what a patient
+sees. The last prints the doctor's morning sheet. `cg clinic demo us-demo --country US` makes one in the US,
+where the feedback message becomes a Google review request.
+
+Sources for the costs above: [Vyora](https://www.vyora.ai/best-ai-voice-agent-india),
+[caller.digital](https://caller.digital/blog/voice-ai-india-2026-complete-guide),
+[Bolti](https://bolti.co.in/blog/voice-ai-platform-pricing-india-comparison),
+[Trikon](https://www.trikon.tech/voice-pricing-comparison),
+[RichAutomate](https://richautomate.in/blog/whatsapp-for-healthcare-clinics-india-2026),
+[D7 Networks](https://d7networks.com/whatsapp-business-api/whatsapp-message-templates/utility-templates/utility-templates-for-healthcare/).

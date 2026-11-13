@@ -462,7 +462,8 @@ ul.plain { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: colum
         ["Follow-ups the doctor asked for", "When the doctor says \"come back in two weeks\", the patient is reminded and rebooked. Missed visits get a new time offered. See Follow-ups."],
         ["Post-visit check", "The day after a procedure the patient is asked how they are. A reply asking for help reaches the clinic at once."],
         ["Reviews, where the rules allow", "The same polite request to every patient, with no reward. Switched off in countries that bar it, with private feedback instead. See Reviews."],
-        ["One sheet a day for the doctor", "Patients seen, who did not come, follow-ups due, calls caught after hours. See Daily sheet."]
+        ["One sheet a day for the doctor", "Patients seen, who did not come, follow-ups due, calls caught after hours. See Daily sheet."],
+        ["A website for the clinic", "A fast, clear site with the doctors, timings, location and a booking button that leads to this receptionist. Set up and looked after for the clinic."]
       ];
       var grid = h("div", { class: "services" });
       items.forEach(function (it) { grid.append(h("div", { class: "service" }, h("h3", { text: it[0] }), h("p", { class: "small", text: it[1] }))); });
