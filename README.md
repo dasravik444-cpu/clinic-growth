@@ -7,8 +7,8 @@ agency projects; it shares no data with them.
 | Part | What it is | State |
 |---|---|---|
 | **Demo** (`demo/`) | The product on invented patients: an AI receptionist you can talk to, the appointment diary, reminders, doctor-advised follow-ups, review rules by country, the doctor's daily sheet. Published as the "Clinic Front Desk" page. | Works. Logic covered by 10 tests; the page was run in a browser with the scripted receptionist. The Claude voice path only runs inside the published page. |
-| **Lead finder** (`leadgen/`) | The WorldReach lead finder, copied here: open map data (Overture Maps, OpenStreetMap), each practice's own website, e-mail hunt, Google Sheet. Set up for 8 kinds of medical practice in 27 capital cities. | 97 tests pass. **Never run live for clinics yet.** |
-| **Consultant tools** (`clinicleads/`) | Finds hospital doctors who run their own clinic, and reads the US clinician registry. | 8 tests pass. Never run live. |
+| **Lead finder** (`leadgen/`) | The WorldReach lead finder, copied here: open map data (Overture Maps, OpenStreetMap), each practice's own website, e-mail hunt, Google Sheet. Set up for 8 kinds of medical practice in 27 capital cities. | 97 tests pass. Run for real on 13 Nov 2026 from open map data (first five cities: 21,347 clinics). Website reading has not run for clinics yet. |
+| **Shortlist** (`clinicleads/`) | Scores the clinics, and finds hospital doctors who run their own clinic by matching hospital "find a doctor" listings to clinics named after the same doctor. | 10 tests pass; run on the real lists. Matches are candidates to confirm. The US registry reader has never run live. |
 
 | Read | For |
 |---|---|
@@ -44,8 +44,34 @@ WhatsApp number to qualify. Every contact keeps the page it came from; nothing
 is guessed.
 
 Add a city: add a row to `config/cities.csv`, then `python scripts/make_markets.py`.
-The category codes in `config/shared/categories.toml` were written from memory;
-check the counts per category after the first real run.
+
+### The working list
+
+```bash
+python -m clinicleads shortlist    # every exported city -> data/clinic-leads.xlsx
+```
+
+| Sheet | What it holds |
+|---|---|
+| Summary | counts per city |
+| Clinics | practices to pitch, best first. Score: e-mail 30, phone 25, own website 15, owner-named 15, high-value field 15 |
+| Consultants | clinics named after a doctor who is also listed on a hospital's site |
+| Rosters | the hospital listings behind those matches (the phone there is the hospital's) |
+| Hospitals | hospitals found (not leads) |
+
+`Contact Rule` says how a business in that country may be contacted; `Review offer`
+says whether the review service may be pitched there.
+
+### From a Claude cloud session
+
+A cloud session cannot use the normal download or read clinic websites. This does
+the open-map-data part there:
+
+```bash
+python scripts/cloud_leads.py fetch      # about 550 MB for the 27 cities
+python scripts/cloud_leads.py run --all
+python -m clinicleads shortlist
+```
 
 ### Hospital doctors with their own practice
 
