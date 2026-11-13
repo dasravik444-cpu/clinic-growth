@@ -16,6 +16,11 @@ what was not.
 - No real patient data until a clinic has signed an agreement and patients have consented.
 - WhatsApp is never automated from a personal number; only the official Business API with opt-in.
 - Tests: `python -m pytest -q` and `node --test demo/engine.test.js`.
+- Leads from a Claude cloud session: `python scripts/cloud_leads.py fetch`, then `run --all`, then
+  `python -m clinicleads shortlist`. It needs only the Overture Maps storage host, which the default
+  network already allows. Clinic websites cannot be read from a cloud session, so e-mails found only
+  on websites need the tablet (`python -m clinicleads find CITY`). Hand lead files to the owner as
+  files; never commit them.
 - The demo is published as the artifact "Clinic Front Desk"
   (https://claude.ai/artifact/Pk8LMPRGUZnJUJR86wxwjS). To update it, publish `demo/index.html` with
   `demo/engine.js` to that URL; do not create a second page.

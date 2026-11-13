@@ -49,6 +49,12 @@ mode = "open-data"       # Overture Maps + OpenStreetMap + the practices' own we
 [open_data]
 min_confidence = 0.5
 refresh_days = 30
+# Members of the health categories that are not practices we sell to.
+exclude_codes = ["optometry", "eyewear_store", "nursing", "audiology", "home_health_care", "medical_transportation",
+                 "blood_and_plasma_donation_center", "health_insurance_office", "ambulance_or_ems_service",
+                 "abuse_and_addiction_treatment_center", "alcohol_and_drug_treatment_center", "public_health_clinic",
+                 "diagnostic_imaging", "laboratory_testing", "radiology", "pharmacy", "veterinarian", "hospice",
+                 "prosthetics", "counseling", "naturopathic_medicine"]
 
 [enrich]
 website = true

@@ -4,8 +4,9 @@
 #   osm       OpenStreetMap tags (the fallback when the open data cannot be read)
 #   queries / match   search words and labels
 #
-# The overture codes below were written from memory of the Overture category list and have not been
-# checked against a live download yet: after the first real run, compare the counts per category.
+# The overture codes below were checked against the 2026-10-21 Overture release for Kolkata. A code matches
+# a place's own code or its broader "basic category"; unwanted members of a basic category are left out in
+# [open_data] exclude_codes (scripts/make_markets.py).
 
 [[categories]]
 key = "dental"
@@ -13,8 +14,8 @@ label = "Dental clinic"
 queries = ["dental clinic", "dentist"]
 match = ["dental", "dentist", "dentistry", "orthodont*", "implant", "smile", "endodont*", "periodont*"]
 osm = ['["amenity"="dentist"]', '["healthcare"="dentist"]']
-overture = ["dentist", "general_dentistry", "cosmetic_dentist", "orthodontist", "pediatric_dentist", "periodontist",
-            "endodontist", "oral_surgeon", "prosthodontist", "dental_hygienist"]
+overture = ["dental_clinic", "general_dentistry", "cosmetic_dentistry", "endodontics", "orthodontics", "pediatric_dentistry",
+            "prosthodontics", "periodontics", "oral_and_maxillofacial_surgery"]
 
 [[categories]]
 key = "skin"
@@ -22,8 +23,7 @@ label = "Skin / Hair / Cosmetic clinic"
 queries = ["skin clinic", "dermatologist", "cosmetic clinic"]
 match = ["dermat*", "skin", "cosmet*", "aesthetic*", "hair transplant", "laser", "plastic surg*", "trichology"]
 osm = ['["healthcare:speciality"~"dermatology|plastic_surgery"]']
-overture = ["dermatologist", "cosmetic_surgeon", "plastic_surgeon", "hair_loss_center", "laser_hair_removal",
-            "medical_spa", "skin_care"]
+overture = ["dermatology", "plastic_and_reconstructive_surgery", "cosmetic_surgery"]
 
 [[categories]]
 key = "eye"
@@ -31,7 +31,7 @@ label = "Eye clinic"
 queries = ["eye clinic", "ophthalmologist"]
 match = ["eye", "ophthalm*", "lasik", "retina", "vision", "netralaya", "optometr*"]
 osm = ['["healthcare"="optometrist"]', '["healthcare:speciality"="ophthalmology"]']
-overture = ["ophthalmologist", "eye_care_clinic", "optometrist", "laser_eye_surgery_lasik"]
+overture = ["vision_or_eye_care_clinic", "ophthalmology", "refractive_surgery_or_lasik"]
 
 [[categories]]
 key = "fertility_women"
@@ -39,7 +39,8 @@ label = "Fertility / Women's clinic"
 queries = ["fertility clinic", "IVF centre", "gynecologist"]
 match = ["fertility", "ivf", "gyn*", "obstet*", "maternity", "women", "infertility"]
 osm = ['["healthcare:speciality"~"gynaecology|fertility"]']
-overture = ["fertility", "obstetrician_and_gynecologist", "reproductive_health_services", "maternity_centers"]
+overture = ["fertility_clinic", "obstetrics_and_gynecology", "reproductive_perinatal_and_womens_care", "maternity_center",
+            "prenatal_and_perinatal_care"]
 
 [[categories]]
 key = "ortho_physio"
@@ -47,7 +48,8 @@ label = "Orthopaedic / Physiotherapy clinic"
 queries = ["orthopedic clinic", "physiotherapy clinic"]
 match = ["orthop*", "physio*", "spine", "joint", "sports medicine", "rehab*", "chiropract*", "bone"]
 osm = ['["healthcare"="physiotherapist"]', '["healthcare:speciality"~"orthopaedics|physiotherapy"]']
-overture = ["orthopedist", "physical_therapy", "sports_medicine", "chiropractor", "rehabilitation_center"]
+overture = ["orthopedics", "physical_therapy", "physical_medicine_and_rehabilitation", "chiropractic", "pain_management",
+            "pediatric_orthopedic_surgery"]
 
 [[categories]]
 key = "doctor"
@@ -56,9 +58,10 @@ queries = ["doctor clinic", "physician", "child specialist", "ENT clinic"]
 match = ["doctor", "dr", "physician", "pediatric*", "paediatric*", "child", "ent", "cardio*", "diabet*", "neuro*",
          "gastro*", "urolog*", "psychiatr*", "chest", "medicine"]
 osm = ['["amenity"="doctors"]', '["healthcare"="doctor"]']
-overture = ["doctor", "family_practice", "internal_medicine", "pediatrician", "ear_nose_and_throat", "cardiologist",
-            "endocrinologist", "gastroenterologist", "neurologist", "urologist", "psychiatrist", "pulmonologist",
-            "rheumatologist", "allergist", "nephrologist", "diabetologist", "general_practitioner"]
+overture = ["doctors_office", "family_practice", "primary_care_or_general_clinic", "internal_medicine", "pediatric_clinic",
+            "ear_nose_and_throat", "cardiology", "neurology", "urology", "endocrinology", "gastroenterology", "pulmonology",
+            "nephrology", "rheumatology", "psychiatry", "allergy_and_immunology", "oncology", "hematology", "proctology",
+            "surgery", "specialized_health_care"]
 
 [[categories]]
 key = "clinic"
@@ -66,7 +69,7 @@ label = "Clinic / Polyclinic"
 queries = ["clinic", "polyclinic", "medical centre"]
 match = ["clinic", "polyclinic", "medical centre", "medical center", "health centre", "health center", "nursing home"]
 osm = ['["amenity"="clinic"]', '["healthcare"~"clinic|centre"]']
-overture = ["medical_center", "urgent_care_clinic", "walk_in_clinic"]
+overture = ["outpatient_care_facility", "walk_in_clinic", "surgery_center", "health_care"]
 
 # Hospitals are not leads. They are kept so their "our doctors" pages can be read into a roster
 # (python -m clinicleads hospitals ...), which is then matched against the private clinics above.

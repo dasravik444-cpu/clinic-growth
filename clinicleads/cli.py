@@ -7,6 +7,8 @@
   hospitals CITY             hospitals found there, with websites (read these for doctor rosters)
   consultants CITY ROSTER    clinics named after a rostered hospital doctor -> data/consultants-CITY.csv
   npi CITY STATE             US clinicians from the public NPI registry -> data/npi-CITY.csv
+  shortlist [CITY ...]       scored clinics, hospital doctors with their own clinic, hospitals
+                             -> data/clinic-leads.xlsx (all exported cities when none is named)
 """
 from __future__ import annotations
 
@@ -64,6 +66,8 @@ def main(argv=None) -> None:
     c = sub.add_parser("consultants")
     c.add_argument("city")
     c.add_argument("roster")
+    sh = sub.add_parser("shortlist")
+    sh.add_argument("cities", nargs="*")
     n = sub.add_parser("npi")
     n.add_argument("city")
     n.add_argument("state")
@@ -97,6 +101,20 @@ def main(argv=None) -> None:
         cm.write_csv(hits, out, cm.EXTRA_COLUMNS + list(leads[0].keys() if leads else []))
         strong = sum(1 for h in hits if h["Consultant Match"] == "strong")
         print(f"{len(hits)} clinics matched a rostered doctor ({strong} strong). Confirm each before contact: {out}")
+    elif a.cmd == "shortlist":
+        from . import shortlist as sl
+        with open(os.path.join(ROOT, "config", "cities.csv"), newline="", encoding="utf-8") as fh:
+            known = {r["slug"]: r for r in csv.DictReader(fh)}
+        slugs = a.cities or sorted(s for s in known if os.path.exists(os.path.join(ROOT, "data", f"leads-{s}.csv")))
+        if not slugs:
+            sys.exit("No exported cities yet. Run: python -m clinicleads export CITY")
+        exports = [(known[s], cm.read_csv(os.path.join(ROOT, "data", f"leads-{s}.csv"))) for s in slugs]
+        lists = sl.build(exports)
+        out = os.path.join(ROOT, "data", "clinic-leads.xlsx")
+        sl.write_xlsx(lists, out)
+        total = sl.summary(lists)[-1]
+        print(f"{total['Clinics']} clinics ({total['With e-mail']} with e-mail), "
+              f"{total['Hospital doctors with own clinic']} hospital doctors with their own clinic: {out}")
     elif a.cmd == "npi":
         rows = npi.collect(a.city, a.state)
         out = os.path.join(ROOT, "data", f"npi-{a.city.lower().replace(' ', '-')}.csv")

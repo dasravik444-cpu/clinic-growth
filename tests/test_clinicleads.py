@@ -45,16 +45,19 @@ def place(i, name, code, dlat=0.0, **kw):
 
 def test_medical_categories_pick_practices_and_drop_the_rest(tmp_path):
     cfg = load_config(city_config("kolkata"))
-    rows = [place(1, "Dr Testwala's Dental Care", "dentist"),
-            place(2, "Fictionrao Skin Clinic", "dermatologist", dlat=0.002),
+    rows = [place(1, "Dr Testwala's Dental Care", "general_dentistry", basic="dental_clinic"),
+            place(2, "Fictionrao Skin Clinic", "dermatology", dlat=0.002, basic="specialized_health_care"),
             place(3, "Sample General Hospital", "hospital", dlat=0.004),
             place(4, "Corner Pharmacy", "pharmacy", dlat=0.006),
-            place(5, "Clove Dental Sample Nagar", "dentist", dlat=0.008)]
+            place(5, "Clove Dental Sample Nagar", "dental_clinic", dlat=0.008)]
     st = OvertureStore(DB(str(tmp_path / "s.sqlite")), cfg, fetcher=lambda *a: [dict(r) for r in rows],
                        release_fn=lambda: "2026-09-23.1")
-    assert st.category_for("dentist", "dentist", "Any Dental") == "dental"
-    assert st.category_for("orthodontist", "dentist", "Brace Place") == "dental"
-    assert st.category_for("dermatologist", "doctor", "Skin Clinic") == "skin"
+    assert st.category_for("dental_clinic", "dental_clinic", "Any Dental") == "dental"
+    assert st.category_for("orthodontics", "dental_clinic", "Brace Place") == "dental"
+    assert st.category_for("dermatology", "specialized_health_care", "Skin Clinic") == "skin"
+    assert st.category_for("optometry", "vision_or_eye_care_clinic", "Specs Shop") is None
+    assert st.category_for("doctors_office", "diagnostics_imaging_or_lab_service", "Dr X") == "doctor"
+    assert st.category_for("diagnostic_imaging", "diagnostics_imaging_or_lab_service", "Scan Centre") is None
     assert st.category_for("hospital", "hospital", "City Hospital") == "hospital"
     assert st.category_for("pharmacy", "pharmacy", "Corner Pharmacy") is None
     found = {c: {p.name for p in st.search_cell(KOLKATA[0], KOLKATA[1], 3.0, c)} for c in ("dental", "skin", "hospital")}
@@ -134,3 +137,62 @@ def test_npi_parse_and_paging(monkeypatch):
     rows = npi.collect("Washington", "DC", taxonomies=["Dentist", "Dermatology"], pause=0)
     assert len(calls) == 2 and len(rows) == 2                     # same clinicians under two searches: kept once
     assert "taxonomy_description=Dentist" in calls[0] and "state=DC" in calls[0]
+
+
+# ---- shortlist: scoring, hospital rosters found in the data, consultants ------------------------
+from clinicleads import shortlist as sl  # noqa: E402
+
+CITY = {"city": "Kolkata", "country": "India", "review_offer": "restricted"}
+
+
+def lead(name, category="Doctor's clinic", website="", phones="+91 98300 00100", emails=""):
+    return {"Business Name": name, "Category": category, "Website": website, "Phones": phones, "Emails": emails,
+            "Lead ID": name[:6]}
+
+
+SHORT = (
+    [lead(f"Dr. {n} - Best Cardiologist", website=f"https://www.bighospital.example/doctors/{i}")
+     for i, n in enumerate(["Anita Fictionrao", "Vikram Inventedkar", "Rina Madeupta", "Sunil Notrealson"])]
+    + [lead("Dr Anita Fictionrao Heart Clinic", website="https://dranita.example", emails="a@dranita.example"),
+       lead("Dr. Anita Fictionrao", website="https://dranita.example"),                    # the same practice again
+       lead("Dr. V Inventedkar Dental Care", "Dental clinic"),
+       lead("City Smiles", "Dental clinic", website="https://www.facebook.com/citysmiles", emails="c@x.example"),
+       lead("No Contact Clinic", phones=""),
+       lead("Big Hospital", cm.HOSPITAL_LABEL, website="https://www.bighospital.example")]
+)
+
+
+def test_doctor_names_and_domains():
+    assert sl.doctor_name("Dr. Tapan Sinha - Best Cardiologist in Kolkata") == "Dr. Tapan Sinha"
+    assert sl.doctor_name("Dr Atul Shrivastava, Knee and Shoulder Surgeon") == "Dr Atul Shrivastava"
+    assert sl.doctor_name("Best Medical Genetics Doctor - Dr. Saswati M") == "Dr. Saswati M"
+    assert sl.is_person("Dr. Tapan Sinha")
+    assert not sl.is_person("City Smiles Dental")
+    assert sl.domain("https://www.BigHospital.example/doctors/1") == "bighospital.example"
+    assert sl.roster_domains(SHORT) == {"bighospital.example"}
+    assert sl.own_site("https://dranita.example", {"bighospital.example"})
+    assert not sl.own_site("https://www.facebook.com/citysmiles", set())
+    assert not sl.own_site("https://www.bighospital.example/doctors/1", {"bighospital.example"})
+
+
+def test_shortlist_splits_scores_and_matches(tmp_path):
+    lists = sl.build([(CITY, SHORT)])
+    assert {k: len(v) for k, v in lists.items()} == {"Clinics": 5, "Consultants": 2, "Rosters": 4, "Hospitals": 1}
+    top = lists["Clinics"][0]
+    assert (top["Business Name"], top["Score"]) == ("Dr Anita Fictionrao Heart Clinic", 85)
+    assert top["Why"] == "e-mail, phone, own website, owner-named" and top["Review offer"] == "restricted"
+    by = {r["Business Name"]: r for r in lists["Clinics"]}
+    assert by["City Smiles"]["Score"] == 70                 # e-mail + phone + high-value field; Facebook is not a site
+    assert by["No Contact Clinic"]["Score"] == 0
+    strong, weak = lists["Consultants"]
+    assert (strong["Match"], strong["Hospital Doctor"], strong["Listed on"]) == ("strong", "Dr. Anita Fictionrao", "bighospital.example")
+    assert strong["Same field"] == "yes"
+    assert (weak["Match"], weak["Business Name"], weak["Same field"]) == ("weak", "Dr. V Inventedkar Dental Care", "")
+    total = sl.summary(lists)[-1]
+    assert (total["City"], total["Clinics"], total["With e-mail"], total["Hospital doctors with own clinic"]) == ("TOTAL", 5, 2, 2)
+    out = tmp_path / "l.xlsx"
+    sl.write_xlsx(lists, str(out))
+    from openpyxl import load_workbook
+    wb = load_workbook(str(out))
+    assert wb.sheetnames == ["Summary", "Clinics", "Consultants", "Rosters", "Hospitals"]
+    assert wb["Clinics"].max_row == 6 and wb["Clinics"]["A1"].value == "Score"
