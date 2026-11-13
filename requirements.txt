@@ -1,4 +1,4 @@
-# The lead finder (leadgen/). The clinic demo (clinicdesk/) needs nothing beyond Python itself.
+# The lead finder (leadgen/) and the sending engine (clinicreach/). The demo (demo/) needs none of this.
 requests>=2.31
 beautifulsoup4>=4.12
 phonenumbers>=8.13
@@ -7,3 +7,5 @@ tzdata>=2024.1
 dnspython>=2.6
 # Reads the Overture Maps open-data places; without it the lead search falls back to OpenStreetMap.
 duckdb>=1.1
+# Writes the working list as an Excel file ( python -m clinicleads shortlist ).
+openpyxl>=3.1
