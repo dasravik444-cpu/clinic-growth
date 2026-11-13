@@ -1,8 +1,18 @@
 # Working on this repository (read first)
 
-The owner is a medical student, not a programmer, and talks to you from a phone. Give exact commands,
-one per line, and say what each does. Straight answers, no padding. Say plainly what was tested and
-what was not.
+The owner is a medical student, not a programmer, and works only from Android: a phone for talking to
+you and a tablet (Termux) for running things. Give exact commands, one per line, and say what each
+does. Straight answers, no padding. Say plainly what was tested and what was not. Files you hand over
+must open on Android (.xlsx or .csv, and small enough for the Sheets app: split big lists).
+
+What the owner told Claude on 11-13 Nov 2026, in their words where quoted:
+- Leads come first. "We need the leads." Do the work; do not stop to ask what you can decide yourself.
+- Do not raise permission prompts to widen the network or change the environment. The owner declined
+  them three times and called them "bullshit permissions". Work with what the session already allows
+  (`scripts/cloud_leads.py` exists for exactly that). If something truly cannot be done from a cloud
+  session, say so once, in one sentence, with the tablet command that does it.
+- (Claude's reading, not the owner's words: questions are fine when only the owner can answer, such as
+  which mailbox or which city first, but pick a sensible default and keep working meanwhile.)
 
 - This project is separate from worldreach, plant-parlour and agency-lead-lab. Do not mix data or
   settings with them. `leadgen/` is a copy of worldreach's lead finder: when a fix is made in one,
