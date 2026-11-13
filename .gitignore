@@ -4,6 +4,8 @@ state/
 out/
 rosters/*.csv
 clinic-data/
+# clinics' patient lists and their records
+clinics/
 *.sqlite
 *.sqlite-journal
 *.sqlite-wal

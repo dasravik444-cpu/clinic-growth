@@ -385,9 +385,8 @@ class Engine:
         if ramp.allowance(self.store, self.o, box, self._day(), self.now())[0] <= 0 or \
                 ramp.room_24h(self.store, self.o, box, self.now()) <= 0:
             return False
-        path = Path(str(a.get("attachment") or ""))
-        path = path if path.is_absolute() else ROOT / path
-        attach = [(_pdf_name(self.o), path.read_bytes())] if path.is_file() else None
+        path = overview_pdf(self.o, lead.market)
+        attach = [(_pdf_name(self.o), path.read_bytes())] if path else None
         if attach is None:
             return False                # no PDF to send: the owner answers
         ids = self.store.msgids(t)
@@ -973,6 +972,22 @@ class Engine:
                 self.notes.append(note)
         return {"status": status, "mode": "live" if self.live else "dry-run", **self.stats,
                 "limits_today": dict(self.caps), "notes": self.notes}
+
+
+def overview_pdf(o: dict, market: str = "") -> Path | None:
+    """The overview PDF for a clinic that asked. India gets the India edition (no review service: Indian doctors
+    may not ask patients for reviews), every other market the international one. The owner's own copy (with their
+    phone and e-mail, put in place by  cg pdf  in data/) wins over the one that comes with the code."""
+    from ..settings import data_dir
+
+    a = o["auto_reply"]
+    intl = market not in ("", "in")
+    own = data_dir() / ("brochure-intl.pdf" if intl else "brochure.pdf")
+    if own.is_file():
+        return own
+    path = Path(str((a.get("attachment_intl") if intl else None) or a.get("attachment") or ""))
+    path = path if path.is_absolute() else ROOT / path
+    return path if path.is_file() else None
 
 
 def _pdf_name(o: dict) -> str:

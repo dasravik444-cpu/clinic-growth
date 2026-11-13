@@ -22,8 +22,14 @@ What the owner told Claude on 11-13 Nov 2026, in their words where quoted:
 - Never ask for app passwords, the Google key file or other secrets in chat: the owner types them into
   `cg settings`.
 - No e-mail to a clinic offers reviews or makes a medical claim (`tests/reach/test_mail.py` checks every
-  text). Hospitals and hospital "find a doctor" listings are never written to. Nothing here writes to
-  patients.
+  text). Hospitals and hospital "find a doctor" listings are never written to.
+- Patients are written to only by `clinicreach/patients.py`, for a clinic that signed (`approved = true`),
+  only to patients whose consent column says yes, and with no medical detail unless the clinic switches
+  `show_reason` on. Review requests only where `REVIEW_COUNTRIES` allows (US, GB); India gets private
+  feedback. The demo clinic (`cg clinic demo`) uses invented patients at example.com; a test run goes to
+  the owner only (`--to`). Patient lists live in `clinics/`, which never goes into git.
+- The overview PDF has two editions: `marketing/brochure.json` (India, no reviews) and
+  `brochure-intl.json`. Rebuild both with `python marketing/build_brochure.py --all`.
 - The repository must stay public: the tablet installs from it (`android/setup.sh`).
 - The repository is public. Never commit lead data, rosters, patient data, keys, or the owner's
   phone, address or e-mail.
@@ -32,8 +38,11 @@ What the owner told Claude on 11-13 Nov 2026, in their words where quoted:
   Do not build ways around that, fake reviews, review gating or rewards.
 - The assistant never gives medical advice. Keep that rule in `rules()` in `demo/engine.js`.
 - No real patient data until a clinic has signed an agreement and patients have consented.
+- Accounts: this project uses its own Google account (owns the Sheet and the Google Cloud key) and
+  its own outreach mailboxes, none shared with WorldReach or the other robots (owner's decision,
+  13 Nov 2026, on Claude's recommendation).
 - WhatsApp is never automated from a personal number; only the official Business API with opt-in.
-- Tests: `python -m pytest -q` (144) and `node --test demo/engine.test.js` (10).
+- Tests: `python -m pytest -q` (155) and `node --test demo/engine.test.js` (10).
 - Leads from a Claude cloud session: `python scripts/cloud_leads.py fetch`, then `run --all`, then
   `python -m clinicleads shortlist`. It needs only the Overture Maps storage host, which the default
   network already allows. Clinic websites cannot be read from a cloud session, so e-mails found only

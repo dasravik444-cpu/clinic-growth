@@ -156,7 +156,7 @@ EN = {
     "follow_ups": [
         """{greeting}
 
-A short follow-up on my note about {topic}. In plain numbers: {math}. You decide what the receptionist may say, you can listen to it before any patient does, and every booking and message is yours to see.
+A short follow-up on my note about {topic}. In plain numbers: {math}. You decide what the receptionist may say and hear it before any patient does. If {business} needs a new website, we build that too.
 
 {cta2}
 
@@ -199,7 +199,7 @@ I said I would not write again, so only this: the offer stands whenever the fron
     # To a business that answered "yes" / "send details": the overview, at once, in the same conversation.
     "auto_reply": """{greeting}
 
-Thanks for getting back to me. The two-page overview is attached: what we would set up for {business}, what a call and the reminder messages look like, and how a trial works.
+Thanks for getting back to me. The two-page overview is attached: what we would set up for {business}, what a call and the reminder messages look like, how a trial works, and the website we can build for you.
 
 The easiest next step is a 15-minute call.{booking_line} Just reply with a day and time that suits you{whatsapp_line}.
 

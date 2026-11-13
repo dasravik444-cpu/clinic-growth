@@ -1,16 +1,22 @@
-"""The overview PDF for clinics: two pages, US Letter (marketing/brochure.pdf).
+"""The overview PDF for clinics: two pages, US Letter. Two editions:
 
-    python marketing/build_brochure.py                  # -> marketing/brochure.pdf (details from brochure.json)
-    python marketing/build_brochure.py --png            # also page images, to check the layout
-    python marketing/build_brochure.py --phone "+91 ..." --email you@x.com --out marketing/own/brochure.pdf
-                                                        # your own copy with your number (never uploaded)
+    in    India (marketing/brochure.json -> brochure.pdf): no review service. Indian doctors may not ask patients
+          for reviews (NMC guidelines, 6 October 2026; docs/STRATEGY.md), so it offers private feedback instead.
+    intl  every other market (brochure-intl.json -> brochure-intl.pdf): Google reviews within Google's rules.
 
-Drawn as an HTML page and printed to PDF by Chromium (Playwright, through node), with the Inter font embedded
-(marketing/fonts), so it can be rebuilt in seconds when the services or prices change.
+    python marketing/build_brochure.py --all                 # both editions (no phone or e-mail in them)
+    python marketing/build_brochure.py --edition intl --png  # one edition, with page images to check the layout
+    python marketing/build_brochure.py --phone "+91 ..." --email you@x.com --out marketing/own/Aurenflow-clinics-overview.pdf
+                                                             # your own copy with your contact details (never uploaded)
 
-What it promises has to stay deliverable: a receptionist for appointments (never medical advice), reminders and
-doctor-advised follow-ups from the clinic's own number to patients who agreed. No review offers (docs/STRATEGY.md),
-no invented numbers, clients or guarantees.
+Taken over from WorldReach's brochure (Aurenflow International, 13 November 2026) with clinic illustrations.
+
+The look follows financial-services brochures: a serif headline face (Playfair Display) with a clean sans body
+(Inter), deep navy with a muted gold accent, warm white, generous space, very little text. Every service is one
+short line with a drawn illustration (inline SVG, made here: no stock images, nothing to license). No logo and no
+prices (the owner's decision, 13 November 2026). The words live in marketing/brochure.json.
+
+Printed to PDF by Chromium (Playwright, through node), with the fonts embedded (marketing/fonts).
 """
 from __future__ import annotations
 
@@ -25,8 +31,12 @@ import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-INK, MUTED, LINE = "#101828", "#5B6676", "#E4E7EC"
-NAVY, VIOLET, LAVENDER, TEAL, GOLD, GREEN = "#25206F", "#4F46E5", "#EEF2FF", "#14B8A6", "#FFC93C", "#138A52"
+INK, NAVY, NAVY2 = "#0E1A2B", "#13294B", "#1F3A63"
+GOLD, GOLD_L, GOLD_XL = "#B08D57", "#E6D7BC", "#F4ECDD"
+IVORY, PANEL = "#FBF9F4", "#F3EEE4"
+SKY, SKY_D = "#D3DDEA", "#8EA6C6"
+SKIN, HAIR = "#E7B48E", "#3B2A22"
+GREY, LINE = "#566070", "#E4DDCF"
 
 
 def esc(s) -> str:
@@ -35,214 +45,357 @@ def esc(s) -> str:
 
 def fonts_css() -> str:
     out = []
-    for f in sorted((HERE / "fonts").glob("inter-latin-*-normal.woff2")):
-        weight = f.name.split("-")[2]
+    for f in sorted((HERE / "fonts").glob("*.woff2")):
+        family = "Serif" if f.name.startswith("playfair") else "Sans"
+        parts = f.stem.split("-")
+        weight, style = parts[-2], parts[-1]
         data = base64.b64encode(f.read_bytes()).decode("ascii")
-        out.append(f"@font-face {{ font-family: BInter; font-weight: {weight}; font-style: normal; "
+        out.append(f"@font-face {{ font-family: B{family}; font-weight: {weight}; font-style: {style}; "
                    f"src: url(data:font/woff2;base64,{data}) format('woff2'); }}")
     return "\n".join(out)
 
 
-def logo(d: dict, size: int = 30, light: bool = False) -> str:
-    icon = (HERE / "brand" / "aurenflow-icon.svg").read_text(encoding="utf-8")
-    icon = icon.replace('width="1024" height="1024"', f'width="{size}" height="{size}"')
-    brand, accent = str(d["brand"]), str(d.get("brand_accent") or "")
-    head = brand[:-len(accent)] if accent and brand.endswith(accent) else brand
-    tail = accent if accent and brand.endswith(accent) else ""
-    color = "#fff" if light else NAVY
-    return (f'<span class="logo">{icon}<span style="color:{color}">{esc(head)}'
-            f'<span style="color:{"#A5F3E8" if light else VIOLET}">{esc(tail)}</span></span></span>')
+# ------------------------------------------------------------------------------------------- illustrations
+def svg(body: str, w: int = 160, h: int = 120, bg: bool = True) -> str:
+    back = (f'<ellipse cx="{w / 2}" cy="{h / 2 + 4}" rx="{w * 0.36}" ry="{h * 0.43}" fill="{PANEL}"/>'
+            f'<ellipse cx="{w / 2}" cy="{h - 10}" rx="{w * 0.33}" ry="5" fill="{GOLD_L}" opacity=".55"/>' if bg else "")
+    return (f'<svg viewBox="0 0 {w} {h}" xmlns="http://www.w3.org/2000/svg" stroke-linecap="round" '
+            f'stroke-linejoin="round">{back}{body}</svg>')
 
+
+def star(cx: float, cy: float, r: float, fill: str = GOLD) -> str:
+    import math
+
+    pts = []
+    for k in range(10):
+        rad = r if k % 2 == 0 else r * 0.45
+        a = -math.pi / 2 + k * math.pi / 5
+        pts.append(f"{cx + rad * math.cos(a):.1f},{cy + rad * math.sin(a):.1f}")
+    return f'<polygon points="{" ".join(pts)}" fill="{fill}"/>'
+
+
+def heart(x: float, y: float, s: float, fill: str) -> str:
+    return (f'<path transform="translate({x} {y}) scale({s})" d="M0 -3 C-2 -8 -10 -7 -10 -1 C-10 4 -3 8 0 11 '
+            f'C3 8 10 4 10 -1 C10 -7 2 -8 0 -3z" fill="{fill}"/>')
+
+
+def person(x: float, y: float, coat: str, s: float = 1.0, hair: str = HAIR, walk: bool = False) -> str:
+    legs = ('<path d="M-5 24 L-9 40 M5 24 L10 40" stroke="{c}" stroke-width="5"/>' if walk else
+            '<path d="M-4 24 L-4 40 M4 24 L4 40" stroke="{c}" stroke-width="5"/>').format(c=INK)
+    return (f'<g transform="translate({x} {y}) scale({s})">{legs}'
+            f'<path d="M-11 26 C-11 8 11 8 11 26 Z" fill="{coat}"/>'
+            f'<rect x="-3" y="2" width="6" height="6" fill="{SKIN}"/>'
+            f'<circle cx="0" cy="-4" r="8" fill="{SKIN}"/>'
+            f'<path d="M-8 -5 C-8 -14 8 -14 8 -5 C5 -9 -3 -10 -8 -5z" fill="{hair}"/></g>')
+
+
+ART = {
+    "sales": lambda: svg(
+        f'<rect x="28" y="54" width="66" height="48" fill="#fff" stroke="{NAVY}" stroke-width="2.4"/>'
+        f'<rect x="24" y="40" width="74" height="15" rx="2" fill="{NAVY}"/>'
+        + "".join(f'<path d="M{24 + i * 12.33} 55 a6.17 6.17 0 0 0 12.33 0z" fill="{NAVY if i % 2 else GOLD}"/>'
+                  for i in range(6))
+        + f'<rect x="51" y="70" width="20" height="32" fill="{SKY}" stroke="{NAVY}" stroke-width="2"/>'
+          f'<circle cx="66" cy="87" r="1.6" fill="{NAVY}"/>'
+          f'<rect x="34" y="66" width="12" height="12" fill="{SKY_D}"/><rect x="76" y="66" width="12" height="12" fill="{SKY_D}"/>'
+          f'<rect x="104" y="80" width="9" height="22" rx="1.5" fill="{GOLD_L}"/>'
+          f'<rect x="117" y="68" width="9" height="34" rx="1.5" fill="{GOLD_L}"/>'
+          f'<rect x="130" y="54" width="9" height="48" rx="1.5" fill="{GOLD}"/>'
+          f'<path d="M100 74 L118 58 L126 63 L142 40" fill="none" stroke="{NAVY}" stroke-width="3"/>'
+          f'<path d="M134 39 L143 38 L142 47" fill="none" stroke="{NAVY}" stroke-width="3"/>'),
+    "reviews": lambda: svg(
+        f'<rect x="46" y="16" width="56" height="92" rx="10" fill="{NAVY}"/>'
+        f'<rect x="51" y="25" width="46" height="74" rx="4" fill="#fff"/>'
+        f'<circle cx="62" cy="37" r="6" fill="{SKY}"/><rect x="71" y="33" width="20" height="3.5" rx="1.7" fill="{SKY_D}"/>'
+        f'<rect x="71" y="39" width="13" height="3" rx="1.5" fill="{SKY}"/>'
+        + "".join(star(57 + i * 8.6, 55, 3.9) for i in range(5))
+        + f'<rect x="56" y="65" width="36" height="3" rx="1.5" fill="{SKY}"/>'
+          f'<rect x="56" y="72" width="30" height="3" rx="1.5" fill="{SKY}"/>'
+          f'<rect x="56" y="79" width="33" height="3" rx="1.5" fill="{SKY}"/>'
+          f'<rect x="96" y="22" width="44" height="30" rx="11" fill="{GOLD}"/>'
+          f'<path d="M106 50 L102 60 L114 51z" fill="{GOLD}"/>' + heart(118, 35, 0.95, "#fff")
+        + star(30, 86, 11, GOLD) + star(132, 84, 7, GOLD_L)),
+    "followup": lambda: svg(
+        f'<rect x="32" y="50" width="80" height="52" rx="5" fill="#fff" stroke="{NAVY}" stroke-width="2.4"/>'
+        f'<path d="M32 52 L72 80 L112 52" fill="none" stroke="{NAVY}" stroke-width="2.4"/>'
+        f'<path d="M32 100 L62 74 M112 100 L82 74" stroke="{SKY_D}" stroke-width="2"/>'
+        f'<circle cx="112" cy="52" r="10" fill="{GOLD}"/>'
+        f'<text x="112" y="56.5" text-anchor="middle" font-family="BSans" font-weight="700" font-size="12" fill="#fff">1</text>'
+        f'<path d="M58 40 C70 22 98 20 112 30" fill="none" stroke="{GOLD}" stroke-width="2" stroke-dasharray="3 5"/>'
+        f'<path d="M116 16 L144 10 L130 34 L124 25z" fill="{NAVY}"/><path d="M124 25 L144 10 L120 30z" fill="{NAVY2}"/>'),
+    "reminder": lambda: svg(
+        f'<rect x="30" y="30" width="72" height="72" rx="7" fill="#fff" stroke="{NAVY}" stroke-width="2.4"/>'
+        f'<path d="M30 48 V37 a7 7 0 0 1 7 -7 H95 a7 7 0 0 1 7 7 V48z" fill="{NAVY}"/>'
+        f'<rect x="44" y="23" width="5" height="13" rx="2.5" fill="{GOLD}"/><rect x="83" y="23" width="5" height="13" rx="2.5" fill="{GOLD}"/>'
+        + "".join(f'<rect x="{39 + c * 14}" y="{56 + r * 13}" width="8" height="7" rx="1.5" fill="{SKY}"/>'
+                  for r in range(3) for c in range(4) if (r, c) != (1, 2))
+        + f'<circle cx="71" cy="72.5" r="8.5" fill="{GOLD}"/>'
+          f'<path d="M67 72.5 l3 3 l5.5 -6" fill="none" stroke="#fff" stroke-width="2.2"/>'
+          f'<path d="M118 52 c-9 0 -12 8 -12 16 v8 l-5 6 h34 l-5 -6 v-8 c0 -8 -3 -16 -12 -16z" fill="{GOLD}"/>'
+          f'<circle cx="118" cy="86" r="4.5" fill="{GOLD}"/><circle cx="118" cy="49" r="3" fill="{GOLD}"/>'
+          f'<path d="M140 56 q6 10 0 20 M96 56 q-6 10 0 20" fill="none" stroke="{GOLD_L}" stroke-width="2.4"/>'),
+    "winback": lambda: svg(
+        f'<rect x="84" y="28" width="44" height="76" rx="2" fill="{NAVY}"/>'
+        f'<rect x="89" y="33" width="34" height="71" fill="{GOLD_XL}"/>'
+        f'<path d="M89 33 L111 40 L111 108 L89 104z" fill="#fff" stroke="{NAVY}" stroke-width="2"/>'
+        f'<circle cx="106" cy="72" r="1.8" fill="{NAVY}"/>'
+        f'<rect x="80" y="104" width="52" height="5" rx="2" fill="{GOLD}"/>'
+        + person(54, 58, SKY_D, 1.05, walk=True)
+        + f'<path d="M62 72 Q70 70 76 64" fill="none" stroke="{SKY_D}" stroke-width="5"/><circle cx="77" cy="63" r="3" fill="{SKIN}"/>'
+        + heart(106, 14, 1.0, GOLD) + heart(72, 30, 0.6, GOLD_L)),
+    "payment": lambda: svg(
+        f'<rect x="28" y="44" width="84" height="56" rx="8" fill="{NAVY}"/>'
+        f'<rect x="28" y="56" width="84" height="10" fill="{INK}"/>'
+        f'<rect x="38" y="74" width="15" height="11" rx="2" fill="{GOLD}"/>'
+        f'<rect x="60" y="78" width="40" height="3.5" rx="1.7" fill="{SKY_D}"/>'
+        f'<rect x="60" y="86" width="26" height="3.5" rx="1.7" fill="{SKY_D}"/>'
+        f'<circle cx="114" cy="46" r="17" fill="{GOLD}"/>'
+        f'<path d="M106 46 l6 6 l11 -12" fill="none" stroke="#fff" stroke-width="3.6"/>'
+        f'<circle cx="40" cy="30" r="7" fill="{GOLD_L}"/><circle cx="52" cy="24" r="5" fill="{GOLD_L}"/>'),
+    "website": lambda: svg(
+        f'<rect x="20" y="20" width="120" height="84" rx="8" fill="#fff" stroke="{NAVY}" stroke-width="2.4"/>'
+        f'<path d="M20 36 V28 a8 8 0 0 1 8 -8 H132 a8 8 0 0 1 8 8 V36z" fill="{NAVY}"/>'
+        f'<circle cx="30" cy="28" r="2.6" fill="{GOLD}"/><circle cx="38" cy="28" r="2.6" fill="{GOLD_L}"/>'
+        f'<circle cx="46" cy="28" r="2.6" fill="{SKY_D}"/>'
+        f'<rect x="30" y="44" width="56" height="32" rx="4" fill="{SKY}"/>'
+        f'<path d="M34 72 L50 56 L60 66 L68 59 L82 72z" fill="{SKY_D}"/><circle cx="74" cy="52" r="4" fill="{GOLD}"/>'
+        f'<rect x="94" y="46" width="36" height="5" rx="2.5" fill="{NAVY}"/>'
+        f'<rect x="94" y="56" width="30" height="3.5" rx="1.7" fill="{SKY}"/>'
+        f'<rect x="94" y="63" width="34" height="3.5" rx="1.7" fill="{SKY}"/>'
+        f'<rect x="94" y="72" width="26" height="9" rx="4.5" fill="{GOLD}"/>'
+        f'<rect x="30" y="84" width="100" height="3.5" rx="1.7" fill="{SKY}"/>'
+        f'<rect x="30" y="91" width="70" height="3.5" rx="1.7" fill="{SKY}"/>'),
+    "receptionist": lambda: svg(
+        f'<rect x="56" y="12" width="46" height="90" rx="9" fill="{NAVY}"/>'
+        f'<rect x="60" y="20" width="38" height="72" rx="3" fill="#fff"/>'
+        f'<circle cx="79" cy="42" r="12" fill="{GOLD}"/>'
+        f'<g transform="translate(72 35) scale(0.58)" fill="none" stroke="#fff" stroke-width="2.6">{ICONS["phone"]}</g>'
+        f'<rect x="66" y="60" width="26" height="4" rx="2" fill="{SKY_D}"/><rect x="70" y="68" width="18" height="3.5" rx="1.7" fill="{SKY}"/>'
+        f'<circle cx="70" cy="82" r="4.5" fill="{SKY_D}"/><circle cx="88" cy="82" r="4.5" fill="{GOLD}"/>'
+        f'<path d="M110 40 q8 12 0 24 M118 33 q13 19 0 38" fill="none" stroke="{GOLD}" stroke-width="3"/>'
+        f'<rect x="10" y="24" width="42" height="26" rx="9" fill="{GOLD_L}"/><path d="M40 49 L48 57 L48 48z" fill="{GOLD_L}"/>'
+        f'<text x="31" y="42" text-anchor="middle" font-family="BSerif" font-weight="700" font-size="12" fill="{NAVY}">24/7</text>'),
+    "rebook": lambda: svg(
+        f'<rect x="24" y="32" width="72" height="70" rx="7" fill="#fff" stroke="{NAVY}" stroke-width="2.4"/>'
+        f'<path d="M24 48 V39 a7 7 0 0 1 7 -7 H89 a7 7 0 0 1 7 7 V48z" fill="{NAVY}"/>'
+        f'<rect x="38" y="25" width="5" height="13" rx="2.5" fill="{GOLD}"/><rect x="77" y="25" width="5" height="13" rx="2.5" fill="{GOLD}"/>'
+        + "".join(f'<rect x="{33 + c * 15}" y="{56 + r * 14}" width="9" height="8" rx="1.5" fill="{SKY}"/>'
+                  for r in range(3) for c in range(4) if (r, c) not in ((0, 1), (2, 2)))
+        + f'<rect x="48" y="56" width="9" height="8" rx="1.5" fill="{SKY_D}"/>'
+          f'<path d="M50 58 l5 4 M55 58 l-5 4" stroke="#fff" stroke-width="1.8"/>'
+          f'<circle cx="67.5" cy="88" r="7.5" fill="{GOLD}"/><path d="M64 88 l2.6 2.6 l5 -5.6" fill="none" stroke="#fff" stroke-width="2.2"/>'
+          f'<path d="M112 50 a20 20 0 1 1 -3 28" fill="none" stroke="{GOLD}" stroke-width="3.4"/>'
+          f'<path d="M104 71 L108 80 L117 76" fill="none" stroke="{GOLD}" stroke-width="3.4"/>'),
+    "postvisit": lambda: svg(
+        person(52, 62, SKY_D, 1.05)
+        + f'<rect x="74" y="16" width="64" height="40" rx="12" fill="#fff" stroke="{NAVY}" stroke-width="2.4"/>'
+          f'<path d="M84 55 L78 68 L96 55z" fill="#fff" stroke="{NAVY}" stroke-width="2.4"/><path d="M83 54.5 H97" stroke="#fff" stroke-width="3.5"/>'
+        + heart(95, 36, 0.95, GOLD)
+        + f'<path d="M110 32 h18 M110 41 h13" stroke="{SKY_D}" stroke-width="3"/>'
+          f'<circle cx="120" cy="86" r="13" fill="{GOLD}"/><path d="M114 86 l4.5 4.5 l8 -9" fill="none" stroke="#fff" stroke-width="3"/>'),
+    "sheet": lambda: svg(
+        f'<rect x="34" y="20" width="64" height="86" rx="6" fill="#fff" stroke="{NAVY}" stroke-width="2.4"/>'
+        f'<rect x="52" y="14" width="28" height="12" rx="4" fill="{NAVY}"/>'
+        + "".join(f'<path d="M44 {42 + i * 15} l3 3 l6 -7" fill="none" stroke="{GOLD}" stroke-width="2.4"/>'
+                  f'<rect x="58" y="{40 + i * 15}" width="{30 - (i % 2) * 8}" height="4" rx="2" fill="{SKY_D if i == 0 else SKY}"/>'
+                  for i in range(4))
+        + f'<rect x="106" y="72" width="8" height="30" rx="1.5" fill="{GOLD_L}"/>'
+          f'<rect x="118" y="60" width="8" height="42" rx="1.5" fill="{GOLD}"/>'
+          f'<rect x="130" y="80" width="8" height="22" rx="1.5" fill="{SKY_D}"/>'
+          f'<circle cx="122" cy="34" r="13" fill="{GOLD_XL}" stroke="{GOLD}" stroke-width="2"/>'
+          f'<path d="M122 26 v8 l6 3" fill="none" stroke="{NAVY}" stroke-width="2.2"/>'),
+    "feedback": lambda: svg(
+        f'<rect x="30" y="22" width="76" height="52" rx="12" fill="#fff" stroke="{NAVY}" stroke-width="2.4"/>'
+        f'<path d="M48 73 L42 88 L62 73z" fill="#fff" stroke="{NAVY}" stroke-width="2.4"/><path d="M47 72.5 H63" stroke="#fff" stroke-width="3.5"/>'
+        f'<rect x="42" y="36" width="44" height="4" rx="2" fill="{SKY_D}"/><rect x="42" y="46" width="52" height="4" rx="2" fill="{SKY}"/>'
+        f'<rect x="42" y="56" width="34" height="4" rx="2" fill="{SKY}"/>'
+        f'<rect x="102" y="62" width="34" height="28" rx="5" fill="{GOLD}"/>'
+        f'<path d="M108 62 v-8 a11 11 0 0 1 22 0 v8" fill="none" stroke="{NAVY}" stroke-width="3.4"/>'
+        f'<circle cx="119" cy="74" r="3.6" fill="#fff"/><rect x="117.6" y="75" width="2.8" height="8" rx="1.4" fill="#fff"/>'),
+    "talk": lambda: svg(
+        person(62, 66, NAVY, 1.0) + person(114, 66, GOLD, 1.0, hair="#6B4A32")
+        + f'<rect x="36" y="16" width="50" height="30" rx="10" fill="#fff" stroke="{NAVY}" stroke-width="2"/>'
+          f'<path d="M54 45 L56 54 L64 45z" fill="#fff" stroke="{NAVY}" stroke-width="2"/>'
+          f'<path d="M54 44.5 H65" stroke="#fff" stroke-width="3"/>'
+          f'<circle cx="49" cy="31" r="3" fill="{SKY_D}"/><circle cx="61" cy="31" r="3" fill="{SKY_D}"/>'
+          f'<circle cx="73" cy="31" r="3" fill="{SKY_D}"/>'
+          f'<rect x="96" y="20" width="40" height="26" rx="9" fill="{GOLD_L}"/><path d="M116 45 L112 53 L123 45z" fill="{GOLD_L}"/>'
+          f'<text x="116" y="39" text-anchor="middle" font-family="BSerif" font-weight="700" font-size="17" fill="{NAVY}">?</text>'),
+    "dig": lambda: svg(
+        f'<rect x="26" y="24" width="78" height="74" rx="6" fill="#fff" stroke="{NAVY}" stroke-width="2.4"/>'
+        f'<rect x="36" y="70" width="10" height="18" rx="1.5" fill="{SKY}"/><rect x="51" y="58" width="10" height="30" rx="1.5" fill="{SKY_D}"/>'
+        f'<rect x="66" y="46" width="10" height="42" rx="1.5" fill="{GOLD_L}"/><rect x="81" y="36" width="10" height="52" rx="1.5" fill="{GOLD}"/>'
+        f'<circle cx="104" cy="58" r="20" fill="#ffffff" fill-opacity=".55" stroke="{NAVY}" stroke-width="5"/>'
+        f'<path d="M118 72 L136 92" stroke="{NAVY}" stroke-width="8"/>'
+        f'<path d="M96 58 l6 6 l10 -12" fill="none" stroke="{GOLD}" stroke-width="3"/>'),
+    "list": lambda: svg(
+        f'<rect x="36" y="26" width="88" height="58" rx="5" fill="{NAVY}"/>'
+        f'<rect x="41" y="31" width="78" height="48" rx="2" fill="#fff"/>'
+        + "".join(f'<circle cx="50" cy="{40 + i * 11}" r="3.6" fill="{GOLD if i == 1 else SKY}"/>'
+                  f'<rect x="58" y="{38 + i * 11}" width="{50 - (i % 2) * 14}" height="4" rx="2" fill="{SKY_D if i == 1 else SKY}"/>'
+                  for i in range(4))
+        + f'<path d="M26 92 L36 84 H124 L134 92z" fill="{SKY_D}"/><rect x="26" y="92" width="108" height="5" rx="2" fill="{NAVY}"/>'),
+    "approve": lambda: svg(
+        f'<rect x="42" y="18" width="62" height="86" rx="5" fill="#fff" stroke="{NAVY}" stroke-width="2.4"/>'
+        + "".join(f'<rect x="52" y="{32 + i * 9}" width="{42 - (i % 3) * 8}" height="3.5" rx="1.7" fill="{SKY}"/>'
+                  for i in range(6))
+        + f'<path d="M52 92 q6 -8 12 0 t12 0" fill="none" stroke="{NAVY}" stroke-width="2"/>'
+          f'<circle cx="106" cy="88" r="15" fill="{GOLD}"/>'
+          f'<path d="M99 88 l5 5 l10 -11" fill="none" stroke="#fff" stroke-width="3.4"/>'
+          f'<path d="M122 26 L92 70 L88 80 L96 74 L126 30z" fill="{NAVY2}"/><path d="M122 26 l4 4" stroke="{GOLD}" stroke-width="4"/>'),
+    "growth": lambda: svg(
+        person(52, 62, NAVY, 0.95) + person(80, 56, GOLD, 1.05, hair="#6B4A32") + person(108, 62, SKY_D, 0.95)
+        + f'<path d="M36 34 L64 22 L84 28 L120 10" fill="none" stroke="{GOLD}" stroke-width="3"/>'
+          f'<path d="M111 9 L121 9 L119 19" fill="none" stroke="{GOLD}" stroke-width="3"/>'),
+}
 
 ICONS = {
-    "back": '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
-    "bell": '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
-    "card": '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
-    "star": '<path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/>',
-    "check": '<path d="M20 6 9 17l-5-5"/>',
-    "phone": '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67'
-             'A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27'
-             'a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>',
-    "sheet": '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6'
-             'a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/>',
+    "gym": '<path d="M5 12h14M3 9v6M21 9v6M6 7v10M18 7v10"/>',
+    "yoga": '<circle cx="12" cy="4" r="2"/><path d="M12 7v7M12 9l-6-3M12 9l6-3M4 18c3-3 5-4 8-4s5 1 8 4M6 20h12"/>',
+    "karate": '<path d="M2 10.5h7M15 10.5h7M2 13.5h7M15 13.5h7M10.5 14l-3 6M13.5 14l3 6"/><rect x="9" y="9" width="6" height="6" rx="1.2"/>',
+    "scissors": '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.1 8.1 20 20M8.1 15.9 20 4"/>',
+    "bed": '<path d="M3 18V7M3 13h18v5M21 13a3 3 0 0 0-3-3h-8v3"/><circle cx="7" cy="10.5" r="1.8"/>',
+    "cup": '<path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM17 10h1.5a2.5 2.5 0 0 1 0 5H17M8 3c0 2 2 2 2 4M12 3c0 2 2 2 2 4"/>',
+    "paw": '<circle cx="7" cy="9" r="1.8"/><circle cx="11" cy="6" r="1.8"/><circle cx="15" cy="7" r="1.8"/>'
+           '<circle cx="18" cy="11" r="1.8"/><path d="M8 17c0-3 2-6 5-6s4 3 4 5-1.5 3-4 2.5S8 20 8 17z"/>',
+    "tooth": '<path d="M7 3c-2.5 0-4 2-4 4.5 0 3 1.5 5 2 7.5.5 3 1 6 2.5 6s1.5-4 3-6c.4-.6.6-.6 1 0 1.5 2 1.5 6 3 6'
+             's2-3 2.5-6c.5-2.5 2-4.5 2-7.5C21 5 19.5 3 17 3c-2 0-3 1-5 1S9 3 7 3z"/>',
+    "sparkle": '<path d="M11 3l1.8 5.2L18 10l-5.2 1.8L11 17l-1.8-5.2L4 10l5.2-1.8z"/><path d="M19 14l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/>',
+    "eye": '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+    "care": '<path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/><path d="M12 9v5M9.5 11.5h5"/>',
+    "bone": '<path d="M17 10c.7-.7 1.7 0 2.5 0a2.5 2.5 0 1 0 0-5 .5.5 0 0 1-.5-.5 2.5 2.5 0 1 0-5 0c0 .8.7 1.8 0 2.5l-7 7'
+            'c-.7.7-1.7 0-2.5 0a2.5 2.5 0 0 0 0 5c.3 0 .5.2.5.5a2.5 2.5 0 1 0 5 0c0-.8-.7-1.8 0-2.5z"/>',
+    "stethoscope": '<path d="M5 3H4a2 2 0 0 0-2 2v4a6 6 0 0 0 12 0V5a2 2 0 0 0-2-2h-1M8 15a6 6 0 0 0 12 0v-3"/><circle cx="20" cy="10" r="2"/>',
+    "wrench": '<path d="M14.7 6.3a4 4 0 0 0 5 5L12 19a2.1 2.1 0 0 1-3-3l7.7-7.7a4 4 0 0 0-2-2zM14.7 6.3 17 4"/>',
+    "check": '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+    "phone": '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 '
+             '2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 '
+             '0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>',
+    "mail": '<rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M3 6.5l9 6.5 9-6.5"/>',
 }
 
 
-def icon(name: str, size: int = 20, color: str = VIOLET) -> str:
-    return (f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2" '
+def icon(name: str, size: int = 22, color: str = GOLD, width: float = 1.7) -> str:
+    return (f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="{width}" '
             f'stroke-linecap="round" stroke-linejoin="round">{ICONS[name]}</svg>')
 
 
-SERVICES = [
-    ("phone", "A receptionist that never misses a call", "Calls and WhatsApp, day and night",
-     "Answers in a natural voice, gives your hours, fee and address, and books, moves or cancels the visit in your "
-     "diary. Anything clinical is passed to you.",
-     "Good evening, Dr. Sen's clinic. The doctor is in tomorrow from 5 pm. I can give you 5:20 or 6:00. Which suits "
-     "you?"),
-    ("bell", "Reminders", "Fewer empty chairs",
-     "A confirmation when the visit is booked and a reminder before it. The patient confirms or changes the time "
-     "with one reply.",
-     "Reminder: you see Dr. Sen tomorrow at 5:20 pm. Reply 1 to confirm, R to change the time."),
-    ("back", "Follow-ups you advised", "Review visits that really happen",
-     "When you tell a patient to come back in two weeks or in six months, we remind them when it is due and offer "
-     "a new time to the ones who missed.",
-     "Hello Ananya, Dr. Sen asked to see you again around Friday. Reply with a day that suits you and we will book "
-     "it."),
-    ("sheet", "One sheet every morning", "Your clinic at a glance",
-     "Patients seen, who did not come, follow-ups due this week, and the calls that were caught while the clinic "
-     "was closed.",
-     "Yesterday: 14 patients seen, 1 did not come, 3 follow-ups due this week, 2 calls caught after hours."),
-]
-STEPS = [
-    ("You tell us how your clinic runs", "Your hours, fees, doctors and the rules for your front desk. It takes "
-                                         "about fifteen minutes on a call."),
-    ("You hear it before patients do", "We set up the receptionist and the messages. You call it yourself, read "
-                                       "every message, and change whatever you like."),
-    ("It goes live on your number", "Calls you cannot take are answered, reminders go out, and every morning you "
-                                    "get the sheet."),
-]
-WHO = ["Dental clinics", "Skin and cosmetic clinics", "Eye clinics", "Women's health and fertility clinics",
-       "Orthopaedic and physiotherapy clinics", "Doctors with their own clinic"]
-FAIR = [
-    ("No medical advice, ever", "The receptionist handles appointments and questions about the clinic. Symptoms, "
-                                "medicines and results are passed to you, and emergencies are sent to the nearest "
-                                "emergency department."),
-    ("Only patients who agreed", "Messages go from your clinic's own number to patients who gave it to you and "
-                                 "agreed to hear from you. Every message says how to stop."),
-    ("Your patients' data stays yours", "We work under a written agreement with your clinic, use the data only for "
-                                        "your messages, and delete it when you ask."),
-]
-
-CSS = """
-@page { size: 8.5in 11in; margin: 0; }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: BInter, Inter, Arial, sans-serif; color: %(INK)s; font-size: 10.4pt; line-height: 1.42; }
-.page { width: 8.5in; height: 11in; padding: 0.42in 0.6in 0.36in; position: relative; overflow: hidden;
-        page-break-after: always; display: flex; flex-direction: column; }
-.logo { display: inline-flex; align-items: center; gap: 9px; font-weight: 800; font-size: 17pt; letter-spacing: -0.3px; }
-.logo svg { border-radius: 8px; }
-.top { display: flex; justify-content: space-between; align-items: center; }
-.tag { color: %(MUTED)s; font-size: 9.6pt; font-weight: 600; }
-h1 { font-size: 27pt; line-height: 1.12; letter-spacing: -0.8px; font-weight: 800; color: %(NAVY)s; margin-top: 0.26in; }
-h1 em { font-style: normal; color: %(VIOLET)s; }
-.lead { font-size: 11.6pt; color: #344054; margin-top: 12px; max-width: 6.3in; }
-h2 { font-size: 13pt; font-weight: 800; color: %(NAVY)s; letter-spacing: -0.2px; margin: 0.2in 0 8px; }
-.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.card { border: 1px solid %(LINE)s; border-radius: 12px; padding: 11px 13px 10px; background: #fff; }
-.card .head { display: flex; align-items: center; gap: 9px; }
-.card .ic { width: 34px; height: 34px; border-radius: 9px; background: %(LAVENDER)s; display: flex; align-items: center;
-            justify-content: center; flex: none; }
-.card b { font-size: 11.4pt; font-weight: 700; display: block; line-height: 1.2; }
-.card .sub { color: %(MUTED)s; font-size: 8.8pt; font-weight: 600; }
-.card p { font-size: 9.3pt; color: #344054; margin-top: 6px; }
-.bubble { margin-top: 7px; background: #F2F4F7; border-radius: 4px 12px 12px 12px; padding: 8px 10px; font-size: 8.7pt;
-          color: #1D2939; }
-.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-.step .n { width: 24px; height: 24px; border-radius: 12px; background: %(NAVY)s; color: #fff; font-weight: 700;
-           font-size: 9.6pt; display: flex; align-items: center; justify-content: center; }
-.step b { display: block; margin-top: 7px; font-size: 10.4pt; }
-.step p { font-size: 9.1pt; color: #475467; margin-top: 3px; }
-.who { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
-.who span { border: 1px solid #D0D5DD; border-radius: 999px; padding: 3px 11px; font-size: 8.9pt; font-weight: 600;
-            color: #344054; }
-.foot { margin-top: auto; display: flex; justify-content: space-between; color: %(MUTED)s; font-size: 8pt;
-        border-top: 1px solid %(LINE)s; padding-top: 8px; }
-.plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 11px; align-items: stretch; }
-.plan { border: 1px solid %(LINE)s; border-radius: 13px; padding: 14px 14px 10px; position: relative; background: #fff; }
-.plan.pop { border: 2px solid %(VIOLET)s; background: #FAFAFF; }
-.plan .badge { position: absolute; top: -10px; left: 14px; background: %(VIOLET)s; color: #fff; font-size: 7.6pt;
-               font-weight: 700; border-radius: 999px; padding: 2px 9px; letter-spacing: 0.3px; }
-.plan .name { font-weight: 800; font-size: 12.4pt; color: %(NAVY)s; }
-.plan .for { color: %(MUTED)s; font-size: 8.8pt; min-height: 2.5em; margin-top: 2px; }
-.plan .price { font-size: 23pt; font-weight: 800; letter-spacing: -0.8px; margin-top: 6px; }
-.plan .price small { font-size: 9pt; font-weight: 600; color: %(MUTED)s; letter-spacing: 0; }
-.plan ul { list-style: none; margin-top: 9px; }
-.plan li { display: flex; gap: 7px; font-size: 9pt; color: #344054; margin-top: 5px; align-items: flex-start; }
-.plan li svg { flex: none; margin-top: 2px; }
-.sprint { margin-top: 12px; border-radius: 13px; background: %(LAVENDER)s; padding: 12px 15px; display: flex;
-          justify-content: space-between; align-items: center; gap: 18px; }
-.sprint b { color: %(NAVY)s; font-size: 11.2pt; }
-.sprint p { font-size: 9.2pt; color: #344054; margin-top: 2px; }
-.sprint .price { font-size: 19pt; font-weight: 800; white-space: nowrap; color: %(NAVY)s; text-align: right; }
-.sprint .price small { display: block; font-size: 8.6pt; font-weight: 600; color: %(MUTED)s; }
-.terms { font-size: 9.2pt; color: #475467; margin-top: 9px; }
-.fair { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-.fair b { font-size: 10pt; display: block; }
-.fair p { font-size: 9pt; color: #475467; margin-top: 3px; }
-.cta { margin-top: 0.16in; border-radius: 15px; background: linear-gradient(120deg, %(NAVY)s 0%%, %(VIOLET)s 75%%, #7C3AED 100%%);
-       color: #fff; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; gap: 20px; }
-.cta h3 { font-size: 14.5pt; font-weight: 800; letter-spacing: -0.3px; }
-.cta p { font-size: 9.8pt; opacity: 0.92; margin-top: 3px; }
-.cta .contact { font-size: 10pt; line-height: 1.6; text-align: right; white-space: nowrap; font-weight: 600; }
-.math { border-left: 3px solid %(TEAL)s; padding: 2px 0 2px 12px; margin-top: 4px; font-size: 9.8pt; color: #344054; }
-""" % {"INK": INK, "MUTED": MUTED, "LINE": LINE, "NAVY": NAVY, "VIOLET": VIOLET, "LAVENDER": LAVENDER, "TEAL": TEAL}
+# ------------------------------------------------------------------------------------------- the pages
+CSS = f"""
+@page {{ size: 8.5in 11in; margin: 0; }}
+* {{ box-sizing: border-box; margin: 0; padding: 0; }}
+body {{ font-family: BSans, Arial, sans-serif; color: {INK}; font-size: 10.5pt; line-height: 1.45; background: #fff; }}
+.page {{ width: 8.5in; height: 11in; padding: 0.55in 0.65in 0.45in; position: relative; overflow: hidden;
+         page-break-after: always; display: flex; flex-direction: column; background: #fff; }}
+.top {{ display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 10px;
+        border-bottom: 1px solid {GOLD}; }}
+.mark {{ font-family: BSerif; font-weight: 600; font-size: 13pt; letter-spacing: 3.5px; color: {NAVY}; }}
+.tag {{ font-size: 7.8pt; letter-spacing: 2.2px; text-transform: uppercase; color: {GREY}; font-weight: 600; }}
+h1 {{ font-family: BSerif; font-weight: 500; font-size: 39pt; line-height: 1.07; letter-spacing: -0.6px;
+      color: {INK}; margin-top: 0.34in; max-width: 6.9in; }}
+h1 em {{ font-style: italic; font-weight: 400; color: {GOLD}; }}
+.sub {{ font-size: 12.2pt; color: {GREY}; margin-top: 14px; max-width: 6.4in; line-height: 1.5; }}
+.label {{ display: flex; align-items: center; gap: 12px; margin: 0.34in 0 14px; font-size: 8pt; letter-spacing: 2.6px;
+          text-transform: uppercase; color: {GOLD}; font-weight: 700; }}
+.label::after {{ content: ""; flex: 1; height: 1px; background: {LINE}; }}
+.grid {{ display: grid; grid-template-columns: repeat(3, 1fr); column-gap: 22px; row-gap: 18px; }}
+.tile .art {{ background: {IVORY}; border-radius: 16px; height: 1.14in; display: flex; align-items: center;
+              justify-content: center; }}
+.tile .art svg {{ height: 1.05in; width: auto; }}
+.tile b {{ display: block; font-family: BSerif; font-weight: 600; font-size: 14.2pt; line-height: 1.2; color: {NAVY};
+           margin-top: 11px; }}
+.tile p {{ color: {GREY}; font-size: 10pt; margin-top: 4px; line-height: 1.4; }}
+.tile.wide {{ grid-column: 1 / -1; display: grid; grid-template-columns: 2.2in 1fr; gap: 22px; align-items: center;
+              background: {NAVY}; border-radius: 16px; padding: 10px 26px 10px 10px; }}
+.tile.wide .art {{ height: 1.05in; background: {IVORY}; }}
+.tile.wide .art svg {{ height: 0.98in; }}
+.tile.wide b {{ color: #fff; margin-top: 0; font-size: 15.5pt; }}
+.tile.wide p {{ color: #C9D3E2; font-size: 10.4pt; }}
+.strip {{ margin-top: auto; display: flex; justify-content: space-between; align-items: center; gap: 16px;
+          border-top: 1px solid {LINE}; padding-top: 13px; }}
+.strip .ask {{ font-family: BSerif; font-size: 13.5pt; color: {NAVY}; font-weight: 500; }}
+.contact {{ display: flex; gap: 22px; align-items: center; font-weight: 600; font-size: 10.4pt; color: {INK}; }}
+.contact span {{ display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }}
+.steps {{ display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }}
+.step .art {{ background: {IVORY}; border-radius: 16px; height: 1.6in; display: flex; align-items: center;
+              justify-content: center; position: relative; }}
+.step .art svg {{ height: 1.32in; max-width: 100%; width: auto; margin-top: 10px; }}
+.step .n {{ position: absolute; top: 7px; left: 11px; font-family: BSerif; font-style: italic; font-size: 15pt; color: {GOLD}; }}
+.step b {{ display: block; font-family: BSerif; font-weight: 600; font-size: 12.6pt; color: {NAVY}; margin-top: 11px; }}
+.step p {{ color: {GREY}; font-size: 9.6pt; margin-top: 3px; }}
+.inds {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }}
+.ind {{ display: flex; align-items: center; gap: 10px; border: 1px solid {LINE}; border-radius: 12px; padding: 14px 12px;
+        font-size: 9.8pt; font-weight: 600; color: {NAVY}; }}
+.ind .i {{ width: 34px; height: 34px; border-radius: 50%; background: {GOLD_XL}; display: flex; align-items: center;
+           justify-content: center; flex: none; }}
+.promise {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 0.35in; }}
+.promise div {{ display: flex; gap: 10px; align-items: flex-start; font-size: 10.6pt; color: {INK}; font-weight: 600;
+                line-height: 1.35; }}
+.promise svg {{ flex: none; margin-top: 1px; }}
+.cta {{ margin-top: auto; margin-bottom: 4px; background: {NAVY}; border-radius: 18px; color: #fff; padding: 28px 30px;
+        display: flex; justify-content: space-between; align-items: center; gap: 26px; }}
+.cta h2 {{ font-family: BSerif; font-weight: 500; font-size: 25pt; line-height: 1.1; }}
+.cta p {{ font-size: 10.6pt; color: #C9D3E2; margin-top: 8px; max-width: 3.7in; }}
+.cta .contact {{ flex-direction: column; align-items: flex-start; gap: 10px; color: #fff; font-size: 11.6pt; }}
+.foot {{ display: flex; justify-content: space-between; color: #8A92A0; font-size: 7.8pt; letter-spacing: 1px;
+         margin-top: 14px; text-transform: uppercase; }}
+"""
 
 
-def money(d: dict, amount) -> str:
-    return f"{d.get('currency', '$')}{amount:,}" if isinstance(amount, (int, float)) else esc(amount)
+def contact_html(d: dict, light: bool = False) -> str:
+    color = "#fff" if light else GOLD
+    items = []
+    if d.get("phone"):
+        items.append(f'<span>{icon("phone", 17, color)}{esc(d["phone"])}</span>')
+    if d.get("email"):
+        items.append(f'<span>{icon("mail", 17, color)}{esc(d["email"])}</span>')
+    if not items:
+        items.append(f'<span>{icon("mail", 17, color)}{esc(d.get("contact_fallback"))}</span>')
+    return f'<div class="contact">{"".join(items)}</div>'
+
+
+def headline(text: str) -> str:
+    """The last few words of the headline in gold italics ("... the customers <em>you already have.</em>")."""
+    words = esc(text).split(" ")
+    cut = max(1, len(words) - 3)
+    return " ".join(words[:cut]) + " <em>" + " ".join(words[cut:]) + "</em>"
+
+
+def top(d: dict) -> str:
+    return f'<div class="top"><span class="mark">{esc(d["brand"]).upper()}</span><span class="tag">{esc(d["tagline"])}</span></div>'
 
 
 def page_one(d: dict) -> str:
-    cards = "".join(
-        f'<div class="card"><div class="head"><div class="ic">{icon(i)}</div><div><b>{esc(t)}</b>'
-        f'<span class="sub">{esc(s)}</span></div></div><p>{esc(p)}</p><div class="bubble">{esc(m)}</div></div>'
-        for i, t, s, p, m in SERVICES)
-    steps = "".join(f'<div class="step"><div class="n">{n}</div><b>{esc(t)}</b><p>{esc(p)}</p></div>'
-                    for n, (t, p) in enumerate(STEPS, start=1))
-    who = "".join(f"<span>{esc(w)}</span>" for w in WHO)
-    return f"""<section class="page">
-<div class="top">{logo(d)}<span class="tag">{esc(d.get("tagline"))}</span></div>
-<h1>Every missed call is a patient <em>who booked somewhere else.</em></h1>
-<p class="lead">A small clinic cannot keep someone on the phone all day and all night. We set up a receptionist that
-answers every call and WhatsApp message, books the visit, reminds the patient, and follows up the review visits you
-advised.</p>
-<h2>What we take off your desk</h2>
-<div class="grid">{cards}</div>
-<h2>How it works</h2>
-<div class="steps">{steps}</div>
-<h2>Made for</h2>
-<div class="who">{who}</div>
-<div class="foot"><span>{esc(d["brand"])} · {esc(d.get("tagline"))}</span><span>1 / 2</span></div>
+    tiles = "".join(
+        (f'<div class="tile wide"><div class="art">{ART[s["art"]]()}</div><div><b>{esc(s["title"])}</b>'
+         f'<p>{esc(s["text"])}</p></div></div>') if s.get("wide") else
+        (f'<div class="tile"><div class="art">{ART[s["art"]]()}</div><b>{esc(s["title"])}</b>'
+         f'<p>{esc(s["text"])}</p></div>') for s in d["services"])
+    return f"""<section class="page">{top(d)}
+<h1>{headline(d["headline"])}</h1>
+<p class="sub">{esc(d["subline"])}</p>
+<div class="label">What we do for you</div>
+<div class="grid">{tiles}</div>
+<div class="strip"><span class="ask">Talk to us</span>{contact_html(d)}</div>
+<div class="foot"><span>{esc(d["brand"])}</span><span>1 / 2</span></div>
 </section>"""
 
 
 def page_two(d: dict) -> str:
-    plans = ""
-    for p in d.get("plans") or []:
-        items = "".join(f"<li>{icon('check', 13, GREEN)}<span>{esc(x)}</span></li>" for x in p.get("items") or [])
-        plans += (f'<div class="plan{" pop" if p.get("popular") else ""}">'
-                  + ('<span class="badge">RECOMMENDED</span>' if p.get("popular") else "")
-                  + f'<div class="name">{esc(p["name"])}</div><div class="for">{esc(p.get("for"))}</div>'
-                  + (f'<div class="price">{money(d, p["price"])} <small>/ {esc(p.get("per", "month"))}</small></div>'
-                     if d.get("show_prices", True) else "")
-                  + f"<ul>{items}</ul></div>")
-    s = d.get("sprint") or {}
-    sprint = ""
-    if s:
-        price = (f'<div class="price">{money(d, s["price"])}<small>{esc(s.get("per", "one time"))}</small></div>'
-                 if d.get("show_prices", True) else "")
-        sprint = f'<div class="sprint"><div><b>{esc(s["name"])}</b><p>{esc(s.get("text"))}</p></div>{price}</div>'
-    fair = "".join(f"<div><b>{esc(t)}</b><p>{esc(p)}</p></div>" for t, p in FAIR)
-    contact = [x for x in (d.get("name"), d.get("email"), (f"WhatsApp {d['phone']}" if d.get("phone") else ""),
-                           d.get("website")) if x]
-    return f"""<section class="page">
-<div class="top">{logo(d)}<span class="tag">{esc(d.get("tagline"))}</span></div>
-<h2 style="margin-top:0.24in">The sum is simple</h2>
-<p class="math">Take a clinic that misses 4 calls a day. If only 1 of them would have booked, that is about 25
-appointments a month going to another clinic. Add the patients who were asked to come back and never did.
-<b>These are sums, not promises:</b> what you gain depends on your clinic, and your morning sheet shows exactly which
-calls were caught and which visits were booked.</p>
-<h2>{"Plans" if d.get("show_prices", True) else "What you can choose"}</h2>
-<div class="plans">{plans}</div>
-{sprint}
-<p class="terms"><b>{esc(d.get("terms"))}</b> {esc(d.get("channels"))}</p>
-<h2>Safe for your patients, safe for you</h2>
-<div class="fair">{fair}</div>
-<div class="cta"><div><h3>Want to hear it answer as your clinic?</h3>
-<p>Reply to our e-mail with a day and time for a 15-minute call. You talk to the receptionist as a patient would and
-see the messages your patients would get. No obligation, and nothing goes live without your yes.</p></div>
-<div class="contact">{"<br>".join(esc(x) for x in contact)}</div></div>
-<div class="foot"><span>{esc(d["brand"])} · edition {esc(d.get("edition"))}</span><span>2 / 2</span></div>
+    steps = "".join(f'<div class="step"><div class="art"><span class="n">0{i}</span>{ART[s["art"]]()}</div>'
+                    f'<b>{esc(s["title"])}</b><p>{esc(s["text"])}</p></div>' for i, s in enumerate(d["steps"], start=1))
+    inds = "".join(f'<div class="ind"><span class="i">{icon(x["icon"], 19, NAVY, 1.6)}</span>{esc(x["label"])}</div>'
+                   for x in d["industries"])
+    promise = "".join(f'<div>{icon("check", 20, GOLD, 2.4)}<span>{esc(p)}</span></div>' for p in d["promises"])
+    return f"""<section class="page">{top(d)}
+<div class="label" style="margin-top:0.4in">How it works</div>
+<div class="steps">{steps}</div>
+<div class="label">Made for</div>
+<div class="inds">{inds}</div>
+<div class="label">Our promise</div>
+<div class="promise">{promise}</div>
+<div class="cta"><div><h2>{esc(d["cta_title"])}</h2><p>{esc(d["cta_text"])}</p></div>{contact_html(d, light=True)}</div>
+<div class="foot"><span>{esc(d["brand"])} · {esc(d["tagline"])}</span><span>2 / 2</span></div>
 </section>"""
 
 
@@ -259,6 +412,10 @@ const { chromium } = require('playwright');
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 816, height: 1056 }, deviceScaleFactor: 2 });
   await page.goto('file://' + html);
+  await page.evaluate(() => document.fonts.ready);
+  const over = await page.evaluate(() => [...document.querySelectorAll('section.page')]
+    .map((s, i) => [i + 1, s.scrollHeight > s.clientHeight + 1]).filter(x => x[1]).map(x => x[0]));
+  if (over.length) { console.error('content runs off page ' + over.join(', ')); process.exit(3); }
   await page.pdf({ path: pdf, width: '8.5in', height: '11in', printBackground: true });
   if (png) {
     const pages = await page.$$('section.page');
@@ -269,21 +426,26 @@ const { chromium } = require('playwright');
 """
 
 
+EDITIONS = {"in": ("brochure.json", "brochure.pdf"), "intl": ("brochure-intl.json", "brochure-intl.pdf")}
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--out", default=str(HERE / "brochure.pdf"))
+    ap.add_argument("--edition", choices=sorted(EDITIONS), default="in")
+    ap.add_argument("--all", action="store_true", help="build every edition")
+    ap.add_argument("--out", default="")
     ap.add_argument("--png", action="store_true", help="also page images next to the PDF")
     ap.add_argument("--html", action="store_true", help="only write the HTML (no Chromium needed)")
-    for key in ("name", "email", "phone", "website", "brand"):
-        ap.add_argument(f"--{key}", default=None)
-    ap.add_argument("--no-prices", action="store_true")
+    ap.add_argument("--phone", default="")
+    ap.add_argument("--email", default="")
     a = ap.parse_args(argv)
-    d = json.loads((HERE / "brochure.json").read_text(encoding="utf-8"))
-    for key in ("name", "email", "phone", "website", "brand"):
-        if getattr(a, key) is not None:
-            d[key] = getattr(a, key)
-    if a.no_prices:
-        d["show_prices"] = False
+    if a.all:
+        rest = [x for x in (argv if argv is not None else sys.argv[1:]) if x != "--all"]
+        return max(main(rest + ["--edition", e]) for e in sorted(EDITIONS))
+    source, default_out = EDITIONS[a.edition]
+    a.out = a.out or str(HERE / default_out)
+    d = json.loads((HERE / source).read_text(encoding="utf-8"))
+    d["phone"], d["email"] = a.phone.strip(), a.email.strip()
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     page = build_html(d)
@@ -301,8 +463,8 @@ def main(argv=None) -> int:
             ["npm", "root", "-g"], capture_output=True, text=True).stdout.strip()}
         r = subprocess.run(["node", str(js), str(src), str(out), png], env=env)
         if r.returncode != 0:
-            print("Could not print the PDF: this needs node with Playwright and Chromium (not on the tablet; the PDF "
-                  "in the code is built for you).")
+            print("Could not print the PDF (needs node with Playwright and Chromium; on the tablet use the PDF that "
+                  "comes with the code)." if r.returncode != 3 else "The text is too long for the page: shorten it.")
             return 1
     print(f"wrote {out} (edition {d.get('edition')})")
     return 0

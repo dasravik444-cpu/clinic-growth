@@ -40,6 +40,8 @@ def test_emails_come_before_the_other_jobs_and_a_switched_off_job_never_runs():
     now = ts("2026-11-11 08:36")
     assert robot.pick_due(now, {}, {})[0].name == "emails"
     done = {"jobs": {"emails": {"slot": ts("2026-11-11 08:35")}}}
+    assert robot.pick_due(now, done, {})[0].name == "clinics"
+    done["jobs"]["clinics"] = {"slot": ts("2026-11-11 08:20")}
     assert robot.pick_due(now, done, {})[0].name == "update"
     assert robot.pick_due(now, done, {"ROBOT_AUTO_UPDATE": "no", "ROBOT_BACKUP": "no", "ROBOT_LEADS": "no"}) is None
 
@@ -109,6 +111,26 @@ def test_the_shipped_files_are_consistent():
     text = (ROOT / "settings-example.txt").read_text() + (ROOT / "marketing" / "brochure.json").read_text()
     assert not re.search(r"\+91[\s\d]{8,}|@gmail\.com", text)
     assert (ROOT / "marketing" / "brochure.pdf").read_bytes().startswith(b"%PDF")
-    assert b"edition CG-" in (ROOT / "marketing" / "brochure.pdf").read_bytes()
-    brochure = (ROOT / "marketing" / "build_brochure.py").read_text().lower() + (ROOT / "marketing" / "brochure.json").read_text().lower()
-    assert "google review" not in brochure and "no medical advice" in brochure
+    india = (ROOT / "marketing" / "brochure.json").read_text().lower()
+    assert "review" not in india.replace("review visit", "").replace("no review service", "").replace("for reviews", "")
+    assert "never medical advice" in india and "website" in india
+
+
+def test_each_market_gets_its_own_overview_and_cg_pdf_takes_the_owner_s_copies(tmp_path, monkeypatch):
+    from clinicreach.outreach.engine import overview_pdf
+
+    down = tmp_path / "Download"
+    down.mkdir()
+    monkeypatch.setenv("WR_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("DOWNLOAD_DIR", str(down))
+    o = C.load(ROOT / "config" / "outreach.toml")
+    assert overview_pdf(o, "in") == ROOT / "marketing" / "brochure.pdf"            # India: no review service
+    assert overview_pdf(o, "gb") == ROOT / "marketing" / "brochure-intl.pdf"
+    india, intl = (ROOT / "marketing" / "brochure.pdf").read_bytes(), (ROOT / "marketing" / "brochure-intl.pdf").read_bytes()
+    assert b"CG-IN-" in india and b"CG-INT-" in intl
+    assert cli.cmd_pdf(None) == 1
+    (down / "Aurenflow-clinics-overview.pdf").write_bytes(b"%PDF-1.4 india")
+    (down / "Aurenflow-clinics-international.pdf").write_bytes(b"%PDF-1.4 intl")
+    assert cli.cmd_pdf(None) == 0
+    assert overview_pdf(o, "in").read_bytes() == b"%PDF-1.4 india"
+    assert overview_pdf(o, "us").read_bytes() == b"%PDF-1.4 intl"

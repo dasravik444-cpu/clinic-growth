@@ -1,0 +1,102 @@
+{
+ "_comment": "International edition of the overview PDF (marketing/brochure-intl.pdf): every market except India. Change the words here, then: python marketing/build_brochure.py --all.",
+ "brand": "Aurenflow",
+ "tagline": "Front desk and follow-up for clinics",
+ "steps": [
+  {
+   "art": "talk",
+   "title": "Tell us how your clinic runs",
+   "text": "Timings, fees, doctors, and what the front desk may say."
+  },
+  {
+   "art": "approve",
+   "title": "We set it up",
+   "text": "The receptionist, the messages and your morning sheet."
+  },
+  {
+   "art": "receptionist",
+   "title": "You try it first",
+   "text": "Call it yourself and read every message before patients do."
+  },
+  {
+   "art": "growth",
+   "title": "It goes live",
+   "text": "On your own number. Fewer missed calls, fewer no-shows."
+  }
+ ],
+ "industries": [
+  {
+   "icon": "tooth",
+   "label": "Dental clinics"
+  },
+  {
+   "icon": "sparkle",
+   "label": "Skin & cosmetic clinics"
+  },
+  {
+   "icon": "eye",
+   "label": "Eye clinics"
+  },
+  {
+   "icon": "care",
+   "label": "Women's health & fertility"
+  },
+  {
+   "icon": "bone",
+   "label": "Orthopaedics & physio"
+  },
+  {
+   "icon": "stethoscope",
+   "label": "Doctors with their own clinic"
+  }
+ ],
+ "cta_title": "Hear it answer as your clinic.",
+ "cta_text": "A 15-minute call: you speak to the receptionist as a patient would and see the messages your patients would get. No obligation.",
+ "contact_fallback": "Simply reply to our e-mail",
+ "edition": "CG-INT-2026-11",
+ "headline": "Every call answered. Every follow-up kept.",
+ "subline": "A receptionist that answers your clinic's phone and messages day and night, books the visit, reminds the patient, brings back the review visits you advised and grows your Google reviews.",
+ "services": [
+  {
+   "art": "receptionist",
+   "title": "A receptionist 24/7",
+   "text": "Answers calls and WhatsApp, day and night, and books the visit."
+  },
+  {
+   "art": "reminder",
+   "title": "Appointment reminders",
+   "text": "Fewer no-shows, and a new time for anyone who missed."
+  },
+  {
+   "art": "followup",
+   "title": "Follow-ups you advised",
+   "text": "The review visit you asked for, reminded and booked."
+  },
+  {
+   "art": "reviews",
+   "title": "More Google reviews",
+   "text": "Every patient asked the same way, within Google's rules."
+  },
+  {
+   "art": "postvisit",
+   "title": "Post-visit check",
+   "text": "A kind message the day after a procedure. Concerns reach you."
+  },
+  {
+   "art": "sheet",
+   "title": "A sheet every morning",
+   "text": "Patients seen, no-shows, follow-ups due, calls caught."
+  },
+  {
+   "art": "website",
+   "wide": true,
+   "title": "Need a website? We build that too.",
+   "text": "A fast, clear site for your clinic: doctors, timings, location and a booking button, set up and looked after for you."
+  }
+ ],
+ "promises": [
+  "Appointments only, never medical advice",
+  "Your patients' data stays yours",
+  "Fully within Google's review rules"
+ ]
+}

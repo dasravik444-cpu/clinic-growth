@@ -1,5 +1,6 @@
 """The robot: runs the jobs by itself, on a timetable ( cg on  starts it,  cg off  stops it).
 
+    clinics  every hour at :20: the patient messages for the clinics that signed up (clinicreach/patients.py)
     emails   every hour at :35, around the clock - but only while it is working hours somewhere we have clinics
              (replies and bounces are read, follow-ups and new e-mails sent)
     leads    once a day: the next half of a city's clinics, then the e-mail hunt for them
@@ -52,8 +53,9 @@ JOBS = {
     "leads": Job("leads", "lead search", ("18:30",), 170, "ROBOT_LEADS"),
     "hunt": Job("hunt", "e-mail hunt", ("21:15",), 60, "ROBOT_HUNT", 2.0),
     "emails": Job("emails", "e-mail run", ("hourly:35",), 58, "ROBOT_EMAILS", 0.75),
+    "clinics": Job("clinics", "clinics' patient messages", ("hourly:20",), 14, "ROBOT_CLINICS", 0.5),
 }
-PRIORITY = ["emails", "update", "backup", "leads", "hunt"]
+PRIORITY = ["emails", "clinics", "update", "backup", "leads", "hunt"]
 
 
 def data() -> Path:
@@ -300,6 +302,8 @@ def command(job: Job, settings: dict) -> list[str]:
         return [*run, "leads", "--minutes", minutes, "--hunt-minutes", "30"]
     if job.name == "hunt":
         return [*run, "hunt", "--minutes", "45"]
+    if job.name == "clinics":
+        return [*run, "clinic", "run", "--all"]
     return [*run, "emails"]
 
 
@@ -312,6 +316,8 @@ def run_job(job: Job, slot: float, settings: dict, st: dict) -> bool:
     updated = False
     if job.name == "emails" and not office_hours_somewhere(time.time()):
         result = "ok: no office hours anywhere now - nothing to do"
+    elif job.name == "clinics" and not [p for p in (ROOT / "clinics").glob("*/clinic.toml") if p.parent.name != "demo"]:
+        result = "ok: no clinics yet"
     elif job.name == "backup":
         result = do_backup(time.time())
     elif not wait_for_internet(600, st):
@@ -374,7 +380,7 @@ def timetable_text(now: float | None = None) -> str:
     lines = [f"Robot: {'RUNNING' if alive else 'not running'}"
              + (f" - working on: {JOBS[st['current']].title}" if alive and st.get("current") in JOBS else ""),
              f"Times are {settings.get('ROBOT_TZ') or 'Asia/Kolkata'} time.", ""]
-    for name in ("emails", "leads", "hunt", "update", "backup"):
+    for name in ("emails", "clinics", "leads", "hunt", "update", "backup"):
         job = JOBS[name]
         rec = (st.get("jobs") or {}).get(name, {})
         on = switched_on(job, settings)
@@ -406,7 +412,7 @@ def main(argv=None) -> int:
         run_job(JOBS[argv[1]], time.time(), S.load(), st)
         print(st["jobs"][argv[1]]["result"])
         return 0
-    print("usage: cg robot serve | status | log [LINES] | run emails|leads|hunt|update|backup")
+    print("usage: cg robot serve | status | log [LINES] | run emails|clinics|leads|hunt|update|backup")
     return 2
 
 

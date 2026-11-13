@@ -1,61 +1,102 @@
 {
- "_comment": "What is printed on the overview PDF (marketing/brochure.pdf). Change it here, then: cg brochure",
+ "_comment": "India edition of the overview PDF (marketing/brochure.pdf). No review service: Indian doctors may not ask patients for reviews (docs/STRATEGY.md). Change the words here, then: python marketing/build_brochure.py --all. Your phone and e-mail are NOT kept here (this repository is public).",
  "brand": "Aurenflow",
- "brand_accent": "flow",
  "tagline": "Front desk and follow-up for clinics",
- "name": "",
- "email": "",
- "phone": "",
- "website": "",
- "edition": "CG-2026-11",
- "currency": "Rs ",
- "show_prices": false,
- "plans": [
+ "steps": [
   {
-   "name": "Reminders",
-   "price": 0,
-   "per": "month",
-   "for": "Fewer no-shows",
-   "items": [
-    "Confirmation and reminder for every visit",
-    "Patients confirm or change the time by replying",
-    "A new time offered after a missed visit",
-    "The sheet every morning"
-   ]
+   "art": "talk",
+   "title": "Tell us how your clinic runs",
+   "text": "Timings, fees, doctors, and what the front desk may say."
   },
   {
-   "name": "Front Desk",
-   "price": 0,
-   "per": "month",
-   "popular": true,
-   "for": "Never miss a call",
-   "items": [
-    "Everything in Reminders",
-    "Receptionist on your phone line and WhatsApp, day and night",
-    "Books, moves and cancels visits in your diary",
-    "A note for you when a caller needs a person"
-   ]
+   "art": "approve",
+   "title": "We set it up",
+   "text": "The receptionist, the messages and your morning sheet."
   },
   {
-   "name": "Complete",
-   "price": 0,
-   "per": "month",
-   "for": "The whole follow-up, off your desk",
-   "items": [
-    "Everything in Front Desk",
-    "Follow-ups for the review visits you advise",
-    "A check on the patient the day after a procedure",
-    "Changes to the wording within a day",
-    "A call with us every month"
-   ]
+   "art": "receptionist",
+   "title": "You try it first",
+   "text": "Call it yourself and read every message before patients do."
+  },
+  {
+   "art": "growth",
+   "title": "It goes live",
+   "text": "On your own number. Fewer missed calls, fewer no-shows."
   }
  ],
- "sprint": {
-  "name": "Pilot clinics",
-  "price": 0,
-  "per": "two weeks",
-  "text": "We are setting this up with a small number of clinics in each city first. A pilot runs for two weeks on one doctor's diary, and you decide after seeing the morning sheets."
- },
- "terms": "Terms and price are agreed with each clinic in writing before anything goes live.",
- "channels": "Calls are answered on your clinic's own number. Messages go from your clinic's own WhatsApp Business number or e-mail, only to patients who agreed to them."
+ "industries": [
+  {
+   "icon": "tooth",
+   "label": "Dental clinics"
+  },
+  {
+   "icon": "sparkle",
+   "label": "Skin & cosmetic clinics"
+  },
+  {
+   "icon": "eye",
+   "label": "Eye clinics"
+  },
+  {
+   "icon": "care",
+   "label": "Women's health & fertility"
+  },
+  {
+   "icon": "bone",
+   "label": "Orthopaedics & physio"
+  },
+  {
+   "icon": "stethoscope",
+   "label": "Doctors with their own clinic"
+  }
+ ],
+ "cta_title": "Hear it answer as your clinic.",
+ "cta_text": "A 15-minute call: you speak to the receptionist as a patient would and see the messages your patients would get. No obligation.",
+ "contact_fallback": "Simply reply to our e-mail",
+ "edition": "CG-IN-2026-11",
+ "headline": "Every call answered. Every follow-up kept.",
+ "subline": "A receptionist that answers your clinic's phone and WhatsApp day and night, books the visit, reminds the patient and brings back the review visits you advised.",
+ "services": [
+  {
+   "art": "receptionist",
+   "title": "A receptionist 24/7",
+   "text": "Answers calls and WhatsApp, day and night, and books the visit."
+  },
+  {
+   "art": "reminder",
+   "title": "Appointment reminders",
+   "text": "Fewer no-shows: patients confirm or change with one reply."
+  },
+  {
+   "art": "followup",
+   "title": "Follow-ups you advised",
+   "text": "The review visit you asked for, reminded and booked."
+  },
+  {
+   "art": "rebook",
+   "title": "Missed visits rebooked",
+   "text": "A new time offered to every patient who did not come."
+  },
+  {
+   "art": "feedback",
+   "title": "Private patient feedback",
+   "text": "A check the day after a visit. Only you see the answers."
+  },
+  {
+   "art": "sheet",
+   "title": "A sheet every morning",
+   "text": "Patients seen, no-shows, follow-ups due, calls caught."
+  },
+  {
+   "art": "website",
+   "wide": true,
+   "title": "Need a website? We build that too.",
+   "text": "A fast, clear site for your clinic: doctors, timings, location and a booking button, set up and looked after for you."
+  }
+ ],
+ "promises": [
+  "Appointments only, never medical advice",
+  "Only patients who agreed hear from you",
+  "Your patients' data stays yours"
+ ]
 }

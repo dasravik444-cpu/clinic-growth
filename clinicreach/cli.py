@@ -15,6 +15,9 @@
     outlook-login N       sign mailbox N (an Outlook address) in, once
     dns DOMAIN            is a sending domain set up for delivery (SPF, DKIM, DMARC)?
     whatsapp ...          the WhatsApp queue for the tablet (list | next | mark | test)
+    clinic ...            the service for a clinic that signed: messages to its own patients
+                          (demo | new | list | preview | run | sheet | report | stop)
+    pdf                   use your own copies of the overview PDFs (saved in the Download folder)
     brochure              build marketing/brochure.pdf again (after changing marketing/brochure.json)
 """
 from __future__ import annotations
@@ -216,7 +219,9 @@ def cmd_check(_a) -> int:
                                           else f"{len(problems)} thing(s) a spam filter would mind:"))
     for p in problems[:12]:
         print("       " + p)
-    pdf = ROOT / str(o["auto_reply"]["attachment"])
+    from .outreach.engine import overview_pdf
+
+    pdf = overview_pdf(o, "in") or ROOT / str(o["auto_reply"]["attachment"])
     line(pdf.is_file(), f"overview PDF for interested businesses: {pdf.name}" + ("" if pdf.is_file() else " is missing"),
          warn=True)
     print("\nAll good." if ok else "\nFix the lines marked [!!] (cg settings), then run  cg check  again.")
@@ -639,7 +644,152 @@ def cmd_whatsapp(a) -> int:
         return 5
 
 
+# ---------------------------------------------------------------------------------------------------- clinics
+def clinics_dir() -> Path:
+    return Path(os.environ.get("CG_CLINICS_DIR") or ROOT / "clinics")
+
+
+def cmd_clinic(a) -> int:
+    """The service, run for a clinic: reminders, follow-ups, post-visit checks, feedback (clinicreach/patients.py)."""
+    from .mail import open_mailbox
+    from .patients import CLINIC_TOML, Clinic, ClinicError, make_demo
+
+    base = clinics_dir()
+    if a.action == "demo":
+        folder = make_demo(base / (a.id or "demo"), None, (a.country or "IN").upper())
+        print(f"Made a demo clinic with 10 invented patients in {folder}.\n"
+              f"See what they get:        cg clinic preview {folder.name}\n"
+              f"Get them all yourself:    cg clinic run {folder.name} --to you@gmail.com\n"
+              f"The doctor's sheet:       cg clinic sheet {folder.name}")
+        return 0
+    if a.action == "new":
+        if not a.id:
+            print("Give the clinic a short name:  cg clinic new sen-dental")
+            return 2
+        folder = base / a.id
+        if (folder / "clinic.toml").exists():
+            print(f"{folder} exists already.")
+            return 1
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / "clinic.toml").write_text(CLINIC_TOML.replace("{id}", a.id), encoding="utf-8")
+        print(f"Made {folder}/clinic.toml - fill it in, save the clinic's export as {folder}/patients.csv,\n"
+              f"then:  cg clinic preview {a.id}")
+        return 0
+    ids = sorted(p.parent.name for p in base.glob("*/clinic.toml"))
+    if a.action == "list":
+        print("\n".join(ids) if ids else "No clinics yet ( cg clinic demo  makes one to try).")
+        return 0
+    if a.action == "run" and a.all:
+        targets = [i for i in ids if i != "demo"]
+    elif a.id:
+        targets = [a.id]
+    else:
+        print("Which clinic? ( cg clinic list )" if a.action != "run" else "No clinics yet.")
+        return 0 if a.action == "run" else 2
+    settings = S.load()
+    boxes = {b.index: b for b in S.mailboxes(settings)}
+    worst = 0
+    for cid in targets:
+        try:
+            clinic = Clinic(base / cid)
+        except ClinicError as exc:
+            print(exc)
+            worst = 1
+            continue
+        try:
+            if a.action == "stop":
+                print("Stopped: never written to again." if clinic.stop(a.email, "stopped by hand") else "Was stopped already.")
+            elif a.action == "report":
+                r = clinic.report(a.days)
+                print(f"{r['clinic']}: the last {r['days']} days\n  messages: " +
+                      (", ".join(f"{k} {v}" for k, v in sorted(r["messages"].items())) or "none") +
+                      f"\n  answers: " + (", ".join(f"{k} {v}" for k, v in sorted(r["answers"].items())) or "none") +
+                      f"\n  asked to stop: {r['stops']}    test messages to you: {r['tests']}")
+            elif a.action == "sheet":
+                print_sheet(clinic.sheet())
+            elif a.action == "preview":
+                problems = clinic.problems()
+                due = clinic.due() if not any("patients.csv" in p for p in problems) else []
+                pts = clinic.patients()
+                print(f"{clinic.cfg['name'] or cid}: {len(pts)} patients in the list "
+                      f"({sum(1 for p in pts if p.consent)} agreed to messages), {len(due)} message(s) due now.")
+                for p in problems:
+                    print(f"  ! {p}")
+                for d in due:
+                    print(f"\n=== {d.label} -> {d.patient.name} <{d.patient.email}>\nSubject: {d.subject}\n\n{d.body}")
+                if not clinic.cfg["approved"]:
+                    print("\nNothing goes to patients until clinic.toml says  approved = true .")
+            elif a.action == "run":
+                problems = [p for p in clinic.problems() if "review_link" not in p]
+                box = boxes.get(int(clinic.cfg["mailbox"]))
+                if problems or not box or box.problem():
+                    print(f"{cid}: not run - " + "; ".join(problems or [f"mailbox {clinic.cfg['mailbox']} is not set up"
+                                                                       + (f" ({box.problem()})" if box else "")]))
+                    worst = max(worst, 1)
+                    continue
+                to = (a.to or "").strip()
+                if cid == "demo" and not to and not a.dry_run:
+                    print("The demo clinic's patients are invented: send it to yourself with  --to you@gmail.com")
+                    worst = max(worst, 1)
+                    continue
+                stats = clinic.run(open_mailbox(box), live=not a.dry_run, test_to=to, max_messages=a.max)
+                print(f"{cid}: {stats['due']} due, {stats['sent']} sent" + (f" (all to {to})" if to else "") +
+                      f", {stats['failed']} failed, {stats['replies']} answers, {stats['stops']} stops"
+                      + (f" - {stats['note']}" if stats["note"] else ""))
+        finally:
+            clinic.close()
+    return worst
+
+
+def print_sheet(s: dict) -> None:
+    print(f"{s['clinic']} - the sheet for {s['date']}\n")
+    print(f"Today ({len(s['today'])} booked):")
+    for t, name, mark in s["today"]:
+        print(f"  {t:>8}  {name}" + ("   (confirmed)" if mark else ""))
+    print(f"Tomorrow: {s['tomorrow']} booked")
+    for title, rows in (("Follow-ups due this week, not booked yet", s["followups_due"]),
+                        ("Follow-ups overdue - call these", s["followups_overdue"]),
+                        ("Missed visits, not rebooked", s["missed"])):
+        print(f"\n{title} ({len(rows)}):")
+        for name, day in rows:
+            print(f"  {name} - {day}")
+    print("\nMessages sent in the last 24 hours: " +
+          (", ".join(f"{k} {v}" for k, v in sorted(s["sent_last_24h"].items())) or "none"))
+    print(f"Answers in the last 2 days ({len(s['answers'])}):")
+    for x in s["answers"]:
+        print(f"  {x['name']}: {x['kind']} - \"{(x['text'] or '')[:80]}\"")
+    print(f"\nPatients who asked to stop: {s['stopped']}    without consent (never written to): {s['no_consent']}")
+
+
 # ---------------------------------------------------------------------------------------------------- brochure
+def cmd_pdf(_a) -> int:
+    """Your own copies of the overview (with your phone and e-mail) from the Download folder: the PDFs clinics get.
+    A file whose name has "international" in it is the edition for clinics outside India."""
+    folders = [Path(p) for p in (os.environ.get("DOWNLOAD_DIR", ""), "/sdcard/Download", str(Path.home() / "Downloads"))
+               if p and Path(p).is_dir()]
+    found = sorted((f for d in folders for f in d.glob("Aurenflow-clinics*.pdf")), key=lambda f: f.stat().st_mtime)
+    if not found:
+        print("No Aurenflow-clinics....pdf in your Download folder. Save the PDFs I sent you there first.")
+        return 1
+    done = 0
+    for edition, name in (("international", "brochure-intl.pdf"), ("", "brochure.pdf")):
+        mine = [f for f in found if ("international" in f.name.lower()) == bool(edition)]
+        if not mine:
+            continue
+        data = mine[-1].read_bytes()
+        if not data.startswith(b"%PDF"):
+            print(f"{mine[-1].name} is not a PDF.")
+            continue
+        dest = S.data_dir() / name
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        tmp = dest.with_suffix(".new")
+        tmp.write_bytes(data)
+        os.replace(tmp, dest)
+        print(f"Done: {mine[-1].name} is now the PDF {'clinics outside India' if edition else 'Indian clinics'} get.")
+        done += 1
+    return 0 if done else 1
+
+
 def cmd_brochure(a) -> int:
     return subprocess.call([sys.executable, str(ROOT / "marketing" / "build_brochure.py"), *a.rest], cwd=ROOT)
 
@@ -690,6 +840,17 @@ def build_parser() -> argparse.ArgumentParser:
     wm.add_argument("key")
     wm.add_argument("number")
     wm.add_argument("result", choices=["Sent", "Not on WhatsApp", "Replied", "Interested", "Not interested", "Skip"])
+    cl = sub.add_parser("clinic", help="the service for a clinic: demo | new | list | preview | run | sheet | report | stop")
+    cl.add_argument("action", choices=["demo", "new", "list", "preview", "run", "sheet", "report", "stop"])
+    cl.add_argument("id", nargs="?", default=None, help="the clinic's folder name, e.g. sen-dental")
+    cl.add_argument("email", nargs="?", default="", help="for stop: the patient's address")
+    cl.add_argument("--to", default="", help="run: send every message to this address of yours instead (a test)")
+    cl.add_argument("--max", type=int, default=None, help="run: at most this many messages")
+    cl.add_argument("--all", action="store_true", help="run: every clinic except the demo")
+    cl.add_argument("--dry-run", action="store_true", help="run: only count what is due")
+    cl.add_argument("--country", default="", help="demo: the clinic's country (IN, US, GB)")
+    cl.add_argument("--days", type=int, default=30)
+    sub.add_parser("pdf", help="use your own copies of the overview PDFs (from the Download folder)")
     br = sub.add_parser("brochure", help="build the overview PDF again")
     br.add_argument("rest", nargs=argparse.REMAINDER)
     rb = sub.add_parser("robot", help="the robot's timetable: serve | status | log | run JOB")
@@ -706,7 +867,8 @@ def main(argv=None) -> int:
         return robot.main(a.rest)
     run = {"check": cmd_check, "preview": cmd_preview, "emails": cmd_emails, "test": cmd_test, "leads": cmd_leads,
            "hunt": cmd_hunt, "status": cmd_status, "report": cmd_report, "resume": cmd_resume,
-           "outlook-login": cmd_outlook_login, "dns": cmd_dns, "whatsapp": cmd_whatsapp, "brochure": cmd_brochure}[a.cmd]
+           "outlook-login": cmd_outlook_login, "dns": cmd_dns, "whatsapp": cmd_whatsapp, "brochure": cmd_brochure,
+           "pdf": cmd_pdf, "clinic": cmd_clinic}[a.cmd]
     try:
         if a.cmd in ("emails", "leads", "hunt"):
             try:

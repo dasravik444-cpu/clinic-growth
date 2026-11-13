@@ -61,7 +61,8 @@ DEFAULTS: dict = {
         "limit_pause_hours": 20, "blocked_pause_hours": 48,
     },
     # A business answers "yes" / "send me details": the overview PDF goes back at once, in the same conversation.
-    "auto_reply": {"enabled": True, "attachment": "marketing/brochure.pdf"},
+    "auto_reply": {"enabled": True, "attachment": "marketing/brochure.pdf",            # India
+                   "attachment_intl": "marketing/brochure-intl.pdf"},                   # every other market
     "whatsapp": {"enabled": True, "start_per_day": 5, "step": 5, "step_every_days": 3, "max_per_day": 25,
                  "max_waiting_days": 5},
     "tabs": {"outreach": "Outreach", "preview": "Email Preview", "replies": "Replies", "whatsapp": "WhatsApp Queue",

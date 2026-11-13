@@ -37,4 +37,5 @@ smtp = 480
 
 [auto_reply]
 enabled = true            # a plain "yes, send it" gets the overview PDF back at once, in the same conversation
-attachment = "marketing/brochure.pdf"
+attachment = "marketing/brochure.pdf"            # India: no review service in it
+attachment_intl = "marketing/brochure-intl.pdf"  # every other market
