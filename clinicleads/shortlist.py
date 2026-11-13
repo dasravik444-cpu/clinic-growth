@@ -24,7 +24,20 @@ HIGH_VALUE = {"Dental clinic", "Skin / Hair / Cosmetic clinic", "Eye clinic", "F
 LISTING_SITES = ("practo.", "justdial.", "lybrate.", "sulekha.", "facebook.", "instagram.", "linkedin.", "google.",
                  "yelp.", "healthgrades.", "zocdoc.", "doctify.", "healthengine.", "hotdoc.", "wa.me", "linktr.ee",
                  "business.site", "indiamart.", "apollo247.", "1mg.", "credihealth.", "clinicspots.", "docindia.",
-                 "nhs.uk", "webmd.", "vitals.", "ratemds.", "topdoctors.", "whatclinic.", "bookmydoctor.")
+                 "nhs.uk", "webmd.", "vitals.", "ratemds.", "topdoctors.", "whatclinic.", "bookmydoctor.",
+                 "eka.care", "share.google", "g.co/", "goo.gl", "bit.ly", "remedoapp.", "docon.", "healthplix.",
+                 "clinicea.", "curofy.", "bajajfinservhealth.", "medibuddy.", "mfine.", "drlogy.", "wixsite.",
+                 "blogspot.", "wordpress.com", "godaddysites.", "sites.google", "carrd.co", "youtube.", "x.com/",
+                 "twitter.", "t.me/", "bestdoctorsin", "doctor-india", "dentist-india")
+# Words that show a listing names a practice or a treatment, not a person.
+NOT_A_NAME = set("""clinic clinics hospital hospitals dental dentist dentistry heart centre center care specialist
+    specialists doctor doctors surgeon surgeons best top skin eye hair child children kids physiotherapy
+    physiotherapist homeopathy homeopathic homeo ayurvedic ayurveda multispeciality speciality specialty super
+    health healthcare medical nursing home polyclinic diagnostic diagnostics lab and the in of for at near
+    consultant senior surgery orthopaedic orthopedic ortho gynecologist gynaecologist cardiologist dermatologist
+    neurologist urologist pediatrician paediatrician physician ent ivf fertility laser cosmetic implant implants
+    smile smiles kidney stone spine knee joint pain piles cancer diabetes thyroid treatment india indian
+    delhi kolkata mumbai bangalore bengaluru chennai hyderabad london dubai singapore advanced family""".split())
 ROSTER_MIN = 4          # doctor-named listings on one domain before it counts as a hospital roster
 CLINIC_COLUMNS = ["Score", "Why", "City", "Country", "Review offer", "Business Name", "Category", "Owner-named",
                   "Phones", "Emails", "Website", "Facebook", "Instagram", "WhatsApp", "Area", "Address",
@@ -41,15 +54,21 @@ def domain(url: str) -> str:
 
 def doctor_name(listing: str) -> str:
     """'Dr. Tapan Sinha - Best Cardiologist in Kolkata' -> 'Dr. Tapan Sinha'."""
-    name = re.split(r"\s+[-|–:(]\s*|,|\bbest\b", listing, maxsplit=1, flags=re.I)[0].strip()
+    name = re.split(r"\s+[-|–:(]\s*|,|\bbest\b|[’']s\b", listing, maxsplit=1, flags=re.I)[0].strip()
     if not name:                                   # 'Best Cardiologist - Dr. Tapan Sinha'
         m = re.search(r"\b(dr\.?\s+[a-z][a-z .']+)", listing, re.I)
         name = m.group(1).strip() if m else ""
-    return name
+    kept = []
+    for word in name.split():                      # 'Dr. Rashmi Sharma CONSULTANT DERMATOLOGY' stops at CONSULTANT
+        if norm_text(word) in NOT_A_NAME:
+            break
+        kept.append(word)
+    return " ".join(kept)
 
 
 def is_person(listing: str) -> bool:
-    return is_owner_named(listing) and len(person_tokens(doctor_name(listing))) >= 2
+    parts = person_tokens(doctor_name(listing))
+    return is_owner_named(listing) and 2 <= len(parts) <= 4 and len(parts[0]) >= 2 and not NOT_A_NAME & set(parts)
 
 
 def roster_domains(rows: list[dict]) -> set[str]:
@@ -59,7 +78,7 @@ def roster_domains(rows: list[dict]) -> set[str]:
         d = domain(r.get("Website", ""))
         if d and is_person(r.get("Business Name", "")):
             seen[d].add(" ".join(person_tokens(doctor_name(r["Business Name"]))))
-    return {d for d, names in seen.items() if len(names) >= ROSTER_MIN}
+    return {d for d, names in seen.items() if len(names) >= ROSTER_MIN and not any(x in d + "/" for x in LISTING_SITES)}
 
 
 def own_site(url: str, rosters: set[str]) -> bool:
@@ -92,7 +111,9 @@ def build(exports: list[tuple[dict, list[dict]]]) -> dict[str, list[dict]]:
             r = {**r, **tag}
             if r.get("Category") == cm.HOSPITAL_LABEL:
                 out["Hospitals"].append(r)
-            elif domain(r.get("Website", "")) in rosters and is_person(r.get("Business Name", "")):
+            elif domain(r.get("Website", "")) in rosters:          # a hospital's own listing: its phone, not a lead
+                if not is_person(r.get("Business Name", "")):
+                    continue
                 roster.append({"doctor_name": doctor_name(r["Business Name"]), "specialty": r.get("Category", ""),
                                "hospital": domain(r["Website"]), "source_url": r["Website"], "listing": r["Business Name"]})
             else:
@@ -103,7 +124,8 @@ def build(exports: list[tuple[dict, list[dict]]]) -> dict[str, list[dict]]:
         out["Rosters"] += [{**tag, "Doctor": x["doctor_name"], "Field": x["specialty"], "Listed on": x["hospital"],
                             "Listing": x["listing"], "Listing page": x["source_url"]} for x in roster]
         # a hospital-site listing must not match itself, so only clinics with their own contact route are candidates
-        named = [c for c in clinics if is_owner_named(c["Business Name"])]
+        named = [c for c in clinics if is_owner_named(c["Business Name"])
+                 and (not c.get("Website", "").strip() or own_site(c["Website"], rosters))]
         field = {norm_text(x["doctor_name"]): x["specialty"] for x in roster}
         seen = set()
         for hit in cm.crossmatch([{**x, "hospital": ""} for x in roster], named):

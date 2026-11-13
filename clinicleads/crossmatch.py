@@ -8,6 +8,7 @@ to confirm - two doctors can share a name.
 from __future__ import annotations
 
 import csv
+import re
 
 from .model import norm_text, person_tokens
 
@@ -40,7 +41,7 @@ def match_strength(doctor: str, clinic_text: str) -> str:
     if len(parts) < 2:
         return ""
     first, last = parts[0], parts[-1]
-    words = set(norm_text(clinic_text).split())
+    words = set(norm_text(re.sub(r"[’']s\b", " ", clinic_text)).split())
     if last not in words or len(last) < 3:
         return ""
     if len(first) >= 3 and first in words:

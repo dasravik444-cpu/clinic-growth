@@ -168,6 +168,13 @@ def test_doctor_names_and_domains():
     assert sl.doctor_name("Best Medical Genetics Doctor - Dr. Saswati M") == "Dr. Saswati M"
     assert sl.is_person("Dr. Tapan Sinha")
     assert not sl.is_person("City Smiles Dental")
+    assert not sl.is_person("Dr Sanjiv's Epione Heart Clinic") and not sl.is_person("Kidney Stone Specialist Doctor in Delhi")
+    assert sl.doctor_name("Dr Sanjiv's Epione Heart Clinic") == "Dr Sanjiv"
+    assert sl.doctor_name("Dr. Rashmi Sharma CONSULTANT DERMATOLOGY | Fortis") == "Dr. Rashmi Sharma"
+    assert not sl.is_person("Dr Smile Dental Clinic") and not sl.is_person("Dr. Tooth Dental Studio")
+    assert cm.match_strength("Dr Sanjiv Fictionrao", "Dr. Kiran's Fictionrao Clinic") == ""       # 's is not an initial
+    profiles = [lead(f"Dr. {n}", website=f"https://www.eka.care/doctor/{i}") for i, n in enumerate(["A Bee", "Cee Dee", "Eff Gee", "Aitch Eye"])]
+    assert sl.roster_domains(profiles) == set()                                                    # a profile site, not a hospital
     assert sl.domain("https://www.BigHospital.example/doctors/1") == "bighospital.example"
     assert sl.roster_domains(SHORT) == {"bighospital.example"}
     assert sl.own_site("https://dranita.example", {"bighospital.example"})

@@ -21,5 +21,6 @@ def is_owner_named(name: str) -> bool:
 
 def person_tokens(name: str) -> list[str]:
     """Name parts of a doctor, without titles, degrees and punctuation."""
-    s = _DEGREES.sub(" ", _DR.sub(" ", name or ""))
+    s = re.sub(r"[’']s\b", " ", name or "")              # "Dr Sanjiv's" is Sanjiv, not Sanjiv S
+    s = _DEGREES.sub(" ", _DR.sub(" ", s))
     return [t for t in norm_text(s).split() if t]
