@@ -15,8 +15,16 @@ What the owner told Claude on 11-13 Nov 2026, in their words where quoted:
   which mailbox or which city first, but pick a sensible default and keep working meanwhile.)
 
 - This project is separate from worldreach, plant-parlour and agency-lead-lab. Do not mix data or
-  settings with them. `leadgen/` is a copy of worldreach's lead finder: when a fix is made in one,
-  consider the other.
+  settings with them. `leadgen/` and `clinicreach/` are copies of worldreach's lead finder and sending
+  engine: when a fix is made in one project, consider the other. On the tablet this robot has its own
+  Ubuntu (`clinicgrowth`), folder (`~/.clinicgrowth`), job number (7821) and ONE Termux command (`cg`);
+  never touch the other robots' (`wr`, `pp`, `robot`).
+- Never ask for app passwords, the Google key file or other secrets in chat: the owner types them into
+  `cg settings`.
+- No e-mail to a clinic offers reviews or makes a medical claim (`tests/reach/test_mail.py` checks every
+  text). Hospitals and hospital "find a doctor" listings are never written to. Nothing here writes to
+  patients.
+- The repository must stay public: the tablet installs from it (`android/setup.sh`).
 - The repository is public. Never commit lead data, rosters, patient data, keys, or the owner's
   phone, address or e-mail.
 - Review requests are sold only where the regulator allows them (`review_offer` in
@@ -25,7 +33,7 @@ What the owner told Claude on 11-13 Nov 2026, in their words where quoted:
 - The assistant never gives medical advice. Keep that rule in `rules()` in `demo/engine.js`.
 - No real patient data until a clinic has signed an agreement and patients have consented.
 - WhatsApp is never automated from a personal number; only the official Business API with opt-in.
-- Tests: `python -m pytest -q` and `node --test demo/engine.test.js`.
+- Tests: `python -m pytest -q` (144) and `node --test demo/engine.test.js` (10).
 - Leads from a Claude cloud session: `python scripts/cloud_leads.py fetch`, then `run --all`, then
   `python -m clinicleads shortlist`. It needs only the Overture Maps storage host, which the default
   network already allows. Clinic websites cannot be read from a cloud session, so e-mails found only

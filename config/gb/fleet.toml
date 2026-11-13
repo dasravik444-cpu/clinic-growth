@@ -1,0 +1,5 @@
+# The cities of this market in the order they are searched (one at a time, each until it is done).
+# Put "#" in front of a line to leave a city out. New cities: config/cities.csv, then scripts/make_markets.py.
+cities = [
+  "london",
+]

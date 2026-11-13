@@ -30,7 +30,7 @@ def city_config(slug: str) -> str:
     hits = [p for p in glob.glob(os.path.join(ROOT, "config", "??", f"{slug}.toml"))]
     if len(hits) != 1:
         known = sorted(os.path.basename(p)[:-5] for p in glob.glob(os.path.join(ROOT, "config", "??", "*.toml"))
-                       if not os.path.basename(p).startswith("_"))
+                       if os.path.basename(p) not in ("_base.toml", "fleet.toml"))
         sys.exit(f"Unknown city '{slug}'. Set up: {', '.join(known)}")
     return hits[0]
 

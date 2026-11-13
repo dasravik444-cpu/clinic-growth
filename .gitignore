@@ -10,9 +10,14 @@ clinic-data/
 *.sqlite-shm
 .env
 settings.txt
-secrets/
+secrets/*
+!secrets/README.txt
 /*.json
 *.zip
+
+# your own copy of the overview PDF (with your phone number), and page images
+marketing/own/
+marketing/*.png
 
 __pycache__/
 *.pyc

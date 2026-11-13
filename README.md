@@ -7,13 +7,16 @@ agency projects; it shares no data with them.
 | Part | What it is | State |
 |---|---|---|
 | **Demo** (`demo/`) | The product on invented patients: an AI receptionist you can talk to, the appointment diary, reminders, doctor-advised follow-ups, review rules by country, the doctor's daily sheet. Published as the "Clinic Front Desk" page. | Works. Logic covered by 10 tests; the page was run in a browser with the scripted receptionist. The Claude voice path only runs inside the published page. |
-| **Lead finder** (`leadgen/`) | The WorldReach lead finder, copied here: open map data (Overture Maps, OpenStreetMap), each practice's own website, e-mail hunt, Google Sheet. Set up for 8 kinds of medical practice in 27 capital cities. | 97 tests pass. Run for real on 13 Nov 2026 from open map data (first five cities: 21,347 clinics). Website reading has not run for clinics yet. |
+| **Lead finder** (`leadgen/`) | The WorldReach lead finder, copied here: open map data (Overture Maps, OpenStreetMap), each practice's own website, e-mail hunt, Google Sheet. Set up for 8 kinds of medical practice in 27 capital cities. | 97 tests pass. Run for real on 13 Nov 2026 from open map data: 61,025 clinics in the 27 cities, 29,538 with e-mail. Website reading has not run for clinics yet. |
+| **Sending** (`clinicreach/`, command `cg`) | The WorldReach sending engine, copied here: Gmail, Outlook and own-domain mailboxes with warm-up and brakes, follow-ups, replies, the Google Sheet, the WhatsApp queue, the robot's timetable, the overview PDF. Clinic wording, no review offers, hospitals never written to. | 37 tests pass against pretend mailboxes and a pretend Sheet. **Has not sent a real e-mail or touched a real Sheet from this project.** |
 | **Shortlist** (`clinicleads/`) | Scores the clinics, and finds hospital doctors who run their own clinic by matching hospital "find a doctor" listings to clinics named after the same doctor. | 10 tests pass; run on the real lists. Matches are candidates to confirm. The US registry reader has never run live. |
 
 | Read | For |
 |---|---|
 | [docs/SERVICES.md](docs/SERVICES.md) | the list of services to pitch, and what each needs to go live |
 | [docs/STRATEGY.md](docs/STRATEGY.md) | what to sell where, prices, and the rules (reviews are off in India) |
+| [docs/SETUP.md](docs/SETUP.md) | **the tablet, step by step**: install, Google Sheet, Gmail and Outlook mailboxes, first e-mails |
+| [docs/OUTLOOK.md](docs/OUTLOOK.md), [DELIVERABILITY](docs/DELIVERABILITY.md), [COMPLIANCE](docs/COMPLIANCE.md), [WHATSAPP](docs/WHATSAPP.md), [HOSTING](docs/HOSTING.md) | Outlook sign-in, staying out of spam, the rules per country, the WhatsApp number, tablet or server |
 
 ## The demo
 
@@ -28,7 +31,22 @@ in one folder and open the HTML file. Tests: `node --test demo/engine.test.js`
 Inside Claude the receptionist is Claude itself and can listen and speak (in
 Chrome or the desktop app). Anywhere else a simple scripted receptionist answers.
 
-## Finding leads (tablet or any computer with open internet)
+## On the tablet: one command, `cg`
+
+```
+cg on / cg off        the robot (e-mails hourly in clinic hours, a lead search every evening)
+cg status             mailboxes (warm-up, pauses), leads, e-mails, replies
+cg check              test the settings, the Sheet, every mailbox and our own e-mails
+cg preview dental     show the e-mails a dental clinic would get
+cg leads              find clinics in the next city now, into the Google Sheet
+cg test a@x b@y       spam test: the next first e-mail from every mailbox, only to your own addresses
+cg emails --dry-run   prepare the e-mails into the Sheet's "Email Preview" tab, send nothing
+cg report             e-mails per day, bounces, replies, who is waiting for your answer
+```
+
+Setup is in docs/SETUP.md. It has its own Ubuntu, folder and job number, so the other robots are not touched.
+
+## Finding leads by hand (any computer with open internet)
 
 ```bash
 pip install -r requirements.txt

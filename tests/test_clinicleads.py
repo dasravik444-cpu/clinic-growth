@@ -27,7 +27,9 @@ def test_every_city_in_the_list_has_a_config_that_loads():
         assert cfg["crawler"]["bot_name"] == "ClinicGrowthBot"
         assert cfg["compliance"]["mode"] == "open-data"
         assert [k["key"] for k in cfg["categories"]][-1] == "hospital"
-    assert len([p for p in glob.glob(os.path.join(ROOT, "config", "??", "*.toml")) if "_base" not in p]) == 27
+    files = [p for p in glob.glob(os.path.join(ROOT, "config", "??", "*.toml"))
+             if os.path.basename(p) not in ("_base.toml", "fleet.toml")]
+    assert len(files) == 27
 
 
 def test_each_city_keeps_its_own_database_and_export():

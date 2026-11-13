@@ -131,6 +131,11 @@ def main() -> None:
         (out / f"{r['slug']}.toml").write_text(CITY.format(code=code, **{**r, "aliases": aliases}), encoding="utf-8")
         done[code] = done.get(code, 0) + 1
     for code, n in done.items():
+        order = [r["slug"] for r in rows if r["cc"].lower() == code]
+        lines = ["# The cities of this market in the order they are searched (one at a time, each until it is done).",
+                 '# Put "#" in front of a line to leave a city out. New cities: config/cities.csv, then scripts/make_markets.py.',
+                 "cities = ["] + [f'  "{s}",' for s in order] + ["]", ""]
+        (ROOT / "config" / code / "fleet.toml").write_text("\n".join(lines), encoding="utf-8")
         print(f"{code}: {n} city files in config/{code}/")
 
 
