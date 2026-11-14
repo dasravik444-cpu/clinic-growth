@@ -1,0 +1,405 @@
+<title>Clinic Growth Demo Room</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Playfair+Display:wght@500;600&display=swap">
+<style>
+/* Layout: one long page in the brochure's colours, a sticky row of section links,
+   each section = one thing the owner can look at or run, demo data clearly marked. */
+:root {
+  --bg: #fbf9f4; --surface: #ffffff; --sunk: #f3eee4; --ink: #0e1a2b; --muted: #566070; --line: #e4ddcf;
+  --navy: #13294b; --gold: #9a7a45; --gold-soft: #f4ecdd; --on-navy: #ffffff;
+  --good: #1d6b45; --good-soft: #e1f1e7; --warn: #8f4c08; --warn-soft: #fbead3; --bad: #a3271f; --bad-soft: #f9e1de;
+  --serif: "Playfair Display", Georgia, "Times New Roman", serif;
+  --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0d1421; --surface: #141e2e; --sunk: #101826; --ink: #e8edf4; --muted: #9aa6b8; --line: #263247;
+  --navy: #c9d6ea; --gold: #d4b07a; --gold-soft: #2a2416; --on-navy: #0d1421;
+  --good: #71cf9b; --good-soft: #13301f; --warn: #f0b066; --warn-soft: #33240f; --bad: #f19a92; --bad-soft: #3a1a17;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0d1421; --surface: #141e2e; --sunk: #101826; --ink: #e8edf4; --muted: #9aa6b8; --line: #263247;
+  --navy: #c9d6ea; --gold: #d4b07a; --gold-soft: #2a2416; --on-navy: #0d1421;
+  --good: #71cf9b; --good-soft: #13301f; --warn: #f0b066; --warn-soft: #33240f; --bad: #f19a92; --bad-soft: #3a1a17;
+  color-scheme: dark }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--sans); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 1040px; margin: 0 auto; padding-block: 0 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+h1 { font-family: var(--serif); font-weight: 500; font-size: clamp(2rem, 5vw, 2.9rem); line-height: 1.1; color: var(--ink); }
+h1 em { font-style: italic; color: var(--gold); font-weight: 500; }
+h2 { font-family: var(--serif); font-weight: 600; font-size: 1.6rem; color: var(--navy); }
+h3 { font-size: 1rem; font-weight: 600; }
+p { margin: 0; }
+a { color: var(--navy); text-underline-offset: 3px; }
+.muted { color: var(--muted); }
+.small { font-size: 0.87rem; }
+.eyebrow { font-size: 0.74rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); font-weight: 700; }
+code, .cmd { font-family: var(--mono); font-size: 0.88rem; }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+header.hero { padding-block: 40px 22px; display: flex; flex-direction: column; gap: 14px; border-bottom: 1px solid var(--gold); }
+.lede { max-width: 44rem; color: var(--muted); font-size: 1.05rem; }
+
+nav.jump { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line);
+  display: flex; gap: 4px; overflow-x: auto; padding-block: 10px; scrollbar-width: none; }
+nav.jump a { white-space: nowrap; text-decoration: none; color: var(--muted); font-weight: 500; font-size: 0.9rem; padding: 6px 12px; border-radius: 999px; }
+nav.jump a:hover, nav.jump a.on { background: var(--gold-soft); color: var(--ink); }
+
+section.block { padding-block: 40px 8px; display: flex; flex-direction: column; gap: 18px; scroll-margin-top: 56px; }
+.head { display: flex; flex-direction: column; gap: 6px; max-width: 46rem; }
+
+.status { display: grid; grid-template-columns: repeat(auto-fit, minmax(14.5rem, 1fr)); gap: 10px; margin-top: 6px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.stat .top { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.pill { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.03em; border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+.pill.good { background: var(--good-soft); color: var(--good); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); }
+.pill.demo { background: var(--gold-soft); color: var(--gold); }
+
+.cta { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; background: var(--navy); color: var(--on-navy); border-radius: 16px; padding: 18px 22px; }
+.cta a.btn { background: var(--gold); color: #fff; text-decoration: none; font-weight: 600; padding: 10px 18px; border-radius: 10px; }
+.cta .url { font-family: var(--mono); font-size: 0.85rem; overflow-wrap: anywhere; opacity: 0.85; }
+
+ol.steps { margin: 0; padding: 0; list-style: none; counter-reset: s; display: flex; flex-direction: column; gap: 10px; max-width: 48rem; }
+ol.steps > li { counter-increment: s; display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: 10px; }
+ol.steps > li::before { content: counter(s); font-family: var(--serif); font-style: italic; color: var(--gold); font-size: 1.25rem; line-height: 1.3; }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tabs button { font: inherit; font-size: 0.88rem; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 6px 13px; }
+.tabs button[aria-pressed="true"] { background: var(--navy); border-color: var(--navy); color: var(--on-navy); font-weight: 600; }
+
+.mails { display: grid; grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr)); gap: 14px; align-items: start; }
+.mail { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; min-width: 0; }
+.mail .meta { background: var(--sunk); padding: 10px 14px; display: flex; flex-direction: column; gap: 2px; font-size: 0.84rem; border-bottom: 1px solid var(--line); }
+.mail .meta b { font-weight: 600; }
+.mail .when { color: var(--gold); font-weight: 700; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.mail pre { margin: 0; padding: 14px; white-space: pre-wrap; overflow-wrap: anywhere; font: 0.9rem/1.55 var(--sans); }
+
+.pages { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 16px; }
+.pages figure { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.pages img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-size: 0.74rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--sunk); }
+td.num, th.num { text-align: right; }
+tr.total td { font-weight: 700; border-bottom: 0; }
+
+.sheet { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 14px 22px; }
+.sheet h3 { font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.sheet ul { margin: 0; padding-left: 1.05rem; }
+
+.checks { display: flex; flex-direction: column; gap: 10px; max-width: 52rem; }
+.check { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid;
+  grid-template-columns: 1.6rem minmax(0, 1fr); gap: 8px 10px; align-items: start; }
+.check input { width: 1.15rem; height: 1.15rem; margin-top: 3px; accent-color: var(--gold); }
+.check.done { opacity: 0.6; }
+.check .body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.cmdrow { display: flex; gap: 8px; align-items: center; background: var(--sunk); border-radius: 8px; padding: 6px 6px 6px 12px; min-width: 0; }
+.cmdrow .cmd { flex: 1; overflow-x: auto; white-space: nowrap; }
+.cmdrow button { font: inherit; font-size: 0.78rem; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 6px; padding: 4px 9px; flex: none; }
+
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 12px; }
+.fact { border-left: 3px solid var(--gold); padding: 2px 0 2px 12px; display: flex; flex-direction: column; gap: 4px; }
+footer { margin-top: 48px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.82rem; }
+</style>
+
+<div class="wrap">
+  <header class="hero">
+    <span class="eyebrow">Aurenflow · Clinic Growth</span>
+    <h1>Everything built so far, <em>in one place.</em></h1>
+    <p class="lede">Each section below is one part of the system: what it does, where to see it, and how to run it. Everything here was produced by the real code in the clinic-growth repository. Patients and clinics in the demos are invented.</p>
+    <div class="status" id="status"></div>
+  </header>
+
+  <nav class="jump" id="jump">
+    <a href="#receptionist">Receptionist</a>
+    <a href="#emails">E-mails to clinics</a>
+    <a href="#brochure">Brochure</a>
+    <a href="#patients">Patient messages</a>
+    <a href="#leads">Leads</a>
+    <a href="#steps">Tablet steps</a>
+    <a href="#demo-data">Demo data</a>
+  </nav>
+
+  <section class="block" id="receptionist">
+    <div class="head">
+      <span class="eyebrow">Demo 1 · runs in your browser</span>
+      <h2>The AI receptionist and the clinic's books</h2>
+      <p class="muted">An invented clinic, Dr. Sen's Dental Clinic in Kolkata. You play the patient; it answers, books the visit into the diary and sends the reminder. The other tabs show the follow-ups, messages, review rules by country, the doctor's morning sheet and the services.</p>
+    </div>
+    <div class="cta">
+      <a class="btn" href="https://claude.ai/artifact/Pk8LMPRGUZnJUJR86wxwjS" target="_blank" rel="noopener">Open the receptionist demo</a>
+      <span class="url">claude.ai/artifact/Pk8LMPRGUZnJUJR86wxwjS</span>
+    </div>
+    <ol class="steps">
+      <li><div><b>Open it in Chrome on the tablet or a computer</b>, or in the Claude desktop app. That is where it can listen and speak. In the Claude phone app you type instead.</div></li>
+      <li><div><b>Check the badge</b> at the top of the call. "Claude is answering" means the real AI receptionist. "Scripted stand-in" means a simple fallback is answering.</div></li>
+      <li><div><b>Speak or type as a patient</b>: "I have a toothache, can I come tomorrow evening?" Give a name and a number when it asks, and say yes to book. The first message asks your permission to use Claude.</div></li>
+      <li><div><b>Open the Diary tab</b> (on a phone, the tabs are above the call). Your booking is there, marked yellow.</div></li>
+      <li><div><b>Press "Next morning"</b>. The system sends what is due by itself: the box at the top lists it, and the Messages tab shows every message.</div></li>
+      <li><div><b>Reviews tab</b>: switch the country between India and the United States to see the review request switch off and on.</div></li>
+      <li><div><b>Daily sheet tab</b>: what the doctor reads each morning. <b>Reset</b> starts again.</div></li>
+    </ol>
+  </section>
+
+  <section class="block" id="emails">
+    <div class="head">
+      <span class="eyebrow">Demo 2 · what the robot sends</span>
+      <h2>The e-mails clinics get from you</h2>
+      <p class="muted">The first e-mail, two follow-ups (3 and 7 days later), and the reply that goes out with the brochure when a clinic answers "yes". Your name, business and number come from <code>cg settings</code>. The clinic names here are invented; on the tablet <code>cg preview dental</code> shows the same.</p>
+    </div>
+    <div class="tabs" id="mailtabs"></div>
+    <div class="mails" id="mails"></div>
+  </section>
+
+  <section class="block" id="brochure">
+    <div class="head">
+      <span class="eyebrow">Demo 3 · attached to the reply</span>
+      <h2>The brochure, in two editions</h2>
+      <p class="muted">India gets the edition without reviews (Indian doctors may not ask patients for them); every other country gets the international one. The robot picks the right one by itself.</p>
+    </div>
+    <div class="tabs" id="brotabs"></div>
+    <div class="pages" id="pages"></div>
+    <p class="small"><a id="pdflink" href="brochure-india.pdf" target="_blank" rel="noopener">Open this edition as a PDF</a></p>
+  </section>
+
+  <section class="block" id="patients">
+    <div class="head">
+      <span class="eyebrow">Demo 4 · the service a clinic pays for</span>
+      <h2>The messages patients get</h2>
+      <p class="muted">A demo clinic with ten invented patients on Monday 16 November. Each card is one real message from <code>cg clinic</code>, with the time it goes out. Sana Ali said no to messages, so she gets nothing. On the tablet, <code>cg clinic run demo --to you@gmail.com</code> sends all of them to you.</p>
+    </div>
+    <div class="tabs" id="pattabs"></div>
+    <div class="tablewrap"><table id="ptable"></table></div>
+    <div class="mails" id="pmails"></div>
+    <h3>The doctor's morning sheet</h3>
+    <div class="sheet" id="sheet"></div>
+  </section>
+
+  <section class="block" id="leads">
+    <div class="head">
+      <span class="eyebrow">Real data · 13 November 2026</span>
+      <h2>Your leads, 27 cities</h2>
+      <p class="muted">Clinics found in open map data, with the phone numbers and e-mails they published. The full lists are the 11 Excel files sent in our chat; this table only counts them. "Hospital doctors" are clinics named after a doctor who is also listed on a hospital's own site: confirm each before writing.</p>
+    </div>
+    <div class="tablewrap"><table id="ltable"></table></div>
+  </section>
+
+  <section class="block" id="steps">
+    <div class="head">
+      <span class="eyebrow">On the tablet, in Termux</span>
+      <h2>Step by step</h2>
+      <p class="muted">Tick each step as you go; the ticks stay on this device. Passwords go into <code>cg settings</code> only, never into a chat.</p>
+    </div>
+    <div class="checks" id="checks"></div>
+  </section>
+
+  <section class="block" id="demo-data">
+    <div class="head">
+      <span class="eyebrow">So nothing surprises you</span>
+      <h2>Which data is demo and which is real</h2>
+    </div>
+    <div class="facts" id="facts"></div>
+  </section>
+
+  <footer>Made from the clinic-growth repository (github.com/dasravik444-cpu/clinic-growth), 14 November 2026. Patients and clinics in the demos are invented.</footer>
+</div>
+
+<script>
+var DATA = __DATA__;
+var LEADS = __LEADS__;
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  function h(tag, attrs) {
+    var el = document.createElement(tag);
+    for (var k in attrs || {}) {
+      if (k === "class") el.className = attrs[k];
+      else if (k === "text") el.textContent = attrs[k];
+      else if (k.slice(0, 2) === "on") el.addEventListener(k.slice(2), attrs[k]);
+      else if (attrs[k] != null && attrs[k] !== false) el.setAttribute(k, attrs[k]);
+    }
+    var kids = Array.prototype.slice.call(arguments, 2);
+    (function add(list) {
+      list.forEach(function (c) {
+        if (c == null || c === false) return;
+        if (Array.isArray(c)) add(c);
+        else el.append(c.nodeType ? c : document.createTextNode(String(c)));
+      });
+    })(kids);
+    return el;
+  }
+  function store(key, val) {
+    try { if (val === undefined) return JSON.parse(localStorage.getItem(key) || "null"); localStorage.setItem(key, JSON.stringify(val)); } catch (e) { return null; }
+  }
+  function tabs(box, items, current, pick) {
+    box.replaceChildren.apply(box, items.map(function (it, i) {
+      return h("button", { type: "button", "aria-pressed": String(i === current), text: it, onclick: function () { pick(i); } });
+    }));
+  }
+  function mail(when, meta, subject, body) {
+    return h("article", { class: "mail" },
+      h("div", { class: "meta" }, when ? h("span", { class: "when", text: when }) : null,
+        h("span", null, meta), h("span", null, h("b", { text: "Subject: " }), subject)),
+      h("pre", { text: body }));
+  }
+
+  // status
+  var STATUS = [
+    ["Receptionist demo", "In the browser: talks, books, reminds", "good", "Live"],
+    ["E-mails to clinics", "Gmail and Outlook, warm-up, follow-ups, replies", "good", "Built"],
+    ["Brochures", "India and international editions", "good", "Done"],
+    ["Patient messages", "Reminders, follow-ups, feedback; by e-mail", "good", "Built"],
+    ["Leads", "61,025 clinics in 27 cities", "good", "Real data"],
+    ["Phone line for the receptionist", "Needs a voice provider and a number", "warn", "Not built"],
+    ["WhatsApp to patients", "Needs the WhatsApp Business API", "warn", "Not built"],
+    ["Clinic websites", "Offered in the brochure", "warn", "Not built"]
+  ];
+  $("status").replaceChildren.apply($("status"), STATUS.map(function (s) {
+    return h("div", { class: "stat" }, h("div", { class: "top" }, h("b", { text: s[0] }), h("span", { class: "pill " + s[2], text: s[3] })),
+      h("span", { class: "muted small", text: s[1] }));
+  }));
+
+  // e-mails to clinics
+  var mailIdx = 0;
+  function showMails() {
+    var m = DATA.clinic_mail[mailIdx];
+    tabs($("mailtabs"), DATA.clinic_mail.map(function (x) { return x.label; }), mailIdx, function (i) { mailIdx = i; showMails(); });
+    var from = "From: Your Name (Aurenflow)  ·  To: " + m.business;
+    $("mails").replaceChildren(
+      mail("Day 1 · first e-mail", from, m.subject, m.first),
+      mail("Day 4 · follow-up 1 (only if no reply)", from, "Re: " + m.subject, m.f1),
+      mail("Day 8 · follow-up 2 (only if no reply)", from, "Re: " + m.subject, m.f2),
+      mail("When they reply \"yes\" · sent at once, brochure attached", from, "Re: " + m.subject, m.reply));
+  }
+  showMails();
+
+  // brochure
+  var EDS = [["India", "in", "brochure-india.pdf"], ["International", "intl", "brochure-international.pdf"]];
+  var edIdx = 0;
+  function showBrochure() {
+    var e = EDS[edIdx];
+    tabs($("brotabs"), EDS.map(function (x) { return x[0] + " edition"; }), edIdx, function (i) { edIdx = i; showBrochure(); });
+    $("pages").replaceChildren(
+      h("figure", null, h("img", { src: "brochure-" + e[1] + "-1.jpg", alt: e[0] + " brochure, page 1", loading: "lazy", width: "1020", height: "1320" }), h("figcaption", { class: "small muted", text: "Page 1" })),
+      h("figure", null, h("img", { src: "brochure-" + e[1] + "-2.jpg", alt: e[0] + " brochure, page 2", loading: "lazy", width: "1020", height: "1320" }), h("figcaption", { class: "small muted", text: "Page 2" })));
+    $("pdflink").setAttribute("href", e[2]);
+    $("pdflink").textContent = "Open the " + e[0] + " edition as a PDF";
+  }
+  showBrochure();
+
+  // patients
+  var PC = [["India", "IN"], ["United States", "US"]];
+  var pcIdx = 0;
+  function showPatients() {
+    var d = DATA.patients[PC[pcIdx][1]];
+    tabs($("pattabs"), PC.map(function (x) { return "Clinic in " + x[0]; }), pcIdx, function (i) { pcIdx = i; showPatients(); });
+    var head = h("tr", null, h("th", { text: "Patient (invented)" }), h("th", { text: "Messages" }), h("th", { text: "Next appointment" }),
+      h("th", { text: "Last visit" }), h("th", { text: "Follow-up due" }), h("th", { text: "Missed" }));
+    var rows = d.patients.map(function (p) {
+      return h("tr", null, h("td", { text: p.name }),
+        h("td", null, h("span", { class: "pill " + (p.consent ? "good" : "bad"), text: p.consent ? "agreed" : "said no" })),
+        h("td", { text: p.appointment || "–" }), h("td", { text: p.last_visit || "–" }), h("td", { text: p.review_due || "–" }), h("td", { text: p.missed || "–" }));
+    });
+    $("ptable").replaceChildren(h("thead", null, head), h("tbody", null, rows));
+    $("pmails").replaceChildren.apply($("pmails"), d.messages.map(function (m) {
+      return mail("Mon 16 Nov, " + m.time + " · " + m.label, "To: " + m.to + " (" + m.email + ")", m.subject, m.body);
+    }));
+    var s = d.sheet;
+    function list(title, items, fmt) {
+      return h("div", null, h("h3", { text: title + " (" + items.length + ")" }),
+        items.length ? h("ul", null, items.map(function (x) { return h("li", { text: fmt(x) }); })) : h("p", { class: "muted small", text: "none" }));
+    }
+    $("sheet").replaceChildren(
+      list("Today, booked", s.today, function (x) { return x[0] + " · " + x[1]; }),
+      h("div", null, h("h3", { text: "Tomorrow" }), h("p", { text: s.tomorrow + " booked" })),
+      list("Follow-ups due this week", s.followups_due, function (x) { return x[0] + " · " + x[1]; }),
+      list("Follow-ups overdue: call these", s.followups_overdue, function (x) { return x[0] + " · due " + x[1]; }),
+      list("Missed, not rebooked", s.missed, function (x) { return x[0] + " · " + x[1]; }),
+      h("div", null, h("h3", { text: "Never written to" }), h("p", { text: s.no_consent + " without consent" })));
+  }
+  showPatients();
+
+  // leads
+  var lh = h("tr", null, h("th", { text: "City" }), h("th", { class: "num", text: "Clinics" }), h("th", { class: "num", text: "With phone" }),
+    h("th", { class: "num", text: "With e-mail" }), h("th", { class: "num", text: "Hospital doctors" }));
+  var fmt = new Intl.NumberFormat("en-IN");
+  $("ltable").replaceChildren(h("thead", null, lh), h("tbody", null, LEADS.map(function (r) {
+    return h("tr", { class: r.city === "TOTAL" ? "total" : null }, h("td", { text: r.city === "TOTAL" ? "All 27 cities" : r.city }),
+      h("td", { class: "num", text: fmt.format(r.clinics) }), h("td", { class: "num", text: fmt.format(r.phone) }),
+      h("td", { class: "num", text: fmt.format(r.email) }), h("td", { class: "num", text: fmt.format(r.consult) }));
+  })));
+
+  // checklist
+  var STEPS = [
+    ["Install Clinic Growth", "Paste in Termux. It sets up its own Ubuntu and adds the one command cg. 10-20 minutes; if it stops, paste it again.",
+     ["curl -fsSL https://raw.githubusercontent.com/dasravik444-cpu/clinic-growth/main/android/setup.sh | bash"]],
+    ["Copy the Google key file", "Download the key file of the new admin Google account into Download first. It prints an address ending in gserviceaccount.com: share your new Google Sheet with it as Editor.",
+     ["cg getkey"]],
+    ["Type in your settings", "Sheet ID, your name, business name (Aurenflow), WhatsApp number, and each outreach Gmail with its 16-letter app password. Leave LIVE=no. Save: CTRL o, Enter. Close: CTRL x.",
+     ["cg settings"]],
+    ["Check everything", "Every line should say [OK]. A line with [!!] says what to fix.", ["cg check"]],
+    ["Read what clinics will get", "The first e-mail and both follow-ups, as in Demo 2 above.", ["cg preview dental"]],
+    ["Try the patient service on yourself", "Makes the demo clinic, shows each patient's message, sends them all to your own address marked TEST, and prints the doctor's sheet. Put your own address in place of you@gmail.com.",
+     ["cg clinic demo", "cg clinic preview demo", "cg clinic run demo --to you@gmail.com", "cg clinic sheet demo"]],
+    ["Fill the Google Sheet with Kolkata's clinics", "About 2 hours: finds the clinics and reads their own websites for more e-mails. Keep the tablet charging on Wi-Fi.",
+     ["cg leads"]],
+    ["Spam test", "Prepares the e-mails into the Sheet's Email Preview tab without sending, then sends one real first e-mail from each mailbox to your own addresses. Look whether each landed in Primary or Spam.",
+     ["cg emails --dry-run", "cg test you@gmail.com"]],
+    ["Go live, slowly", "In cg settings change LIVE=no to LIVE=yes. Then two real e-mails with a copy to you, then switch the robot on.",
+     ["cg settings", "cg emails --max 2 --copy-to you@gmail.com", "cg on"]],
+    ["Every day", "Who answered, and is every mailbox sending?", ["cg report", "cg status"]]
+  ];
+  var ticks = store("cg-steps") || {};
+  $("checks").replaceChildren.apply($("checks"), STEPS.map(function (s, i) {
+    var box = h("input", { type: "checkbox", id: "step-" + i, "aria-label": "Done: " + s[0] });
+    box.checked = !!ticks[i];
+    var card = h("div", { class: "check" + (box.checked ? " done" : "") }, box,
+      h("div", { class: "body" }, h("label", { for: "step-" + i }, h("b", { text: (i + 1) + ". " + s[0] })),
+        h("span", { class: "small muted", text: s[1] }),
+        s[2].map(function (c) {
+          var code = h("span", { class: "cmd", text: c });
+          var btn = h("button", { type: "button", text: "Copy", onclick: function () {
+            var done = function () { btn.textContent = "Copied"; setTimeout(function () { btn.textContent = "Copy"; }, 1400); };
+            try { navigator.clipboard.writeText(c).then(done, function () { selectText(code); }); } catch (e) { selectText(code); }
+          } });
+          return h("div", { class: "cmdrow" }, code, btn);
+        })));
+    box.addEventListener("change", function () { ticks[i] = box.checked; store("cg-steps", ticks); card.classList.toggle("done", box.checked); });
+    return card;
+  }));
+  function selectText(el) { var r = document.createRange(); r.selectNodeContents(el); var s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+
+  // demo or real
+  var FACTS = [
+    ["Receptionist demo: demo data", "Dr. Sen's Dental Clinic and its patients (Meera Iyer, Arjun Nair and others) are invented. Nothing you do there reaches anyone. Reset brings it back."],
+    ["Patient service: demo data", "cg clinic demo makes 10 invented patients at example.com addresses, which can never receive mail. With --to, every message goes only to you, marked TEST."],
+    ["E-mails to clinics: real, once you go live", "With LIVE=no nothing is sent. cg test and --copy-to only write to your own addresses."],
+    ["Leads: real", "61,025 real clinics with the contacts they published themselves. They are in the Excel files from our chat, and in your Sheet once cg leads runs."],
+    ["Your Google Sheet: empty until cg leads", "Claude cannot reach your Sheet or your mailboxes from here; the tablet fills and uses them."],
+    ["Tests: pretend mailboxes", "155 automatic tests run every part against pretend mailboxes and a pretend Sheet. No real e-mail has been sent by this project yet."]
+  ];
+  $("facts").replaceChildren.apply($("facts"), FACTS.map(function (f) {
+    return h("div", { class: "fact" }, h("b", { text: f[0] }), h("span", { class: "small muted", text: f[1] }));
+  }));
+
+  // highlight the section in view
+  var links = Array.prototype.slice.call(document.querySelectorAll("nav.jump a"));
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) {
+        if (e.isIntersecting) links.forEach(function (a) { a.classList.toggle("on", a.getAttribute("href") === "#" + e.target.id); });
+      });
+    }, { rootMargin: "-40% 0px -55% 0px" });
+    document.querySelectorAll("section.block").forEach(function (s) { io.observe(s); });
+  }
+})();
+</script>

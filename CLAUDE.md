@@ -51,3 +51,8 @@ What the owner told Claude on 11-13 Nov 2026, in their words where quoted:
 - The demo is published as the artifact "Clinic Front Desk"
   (https://claude.ai/artifact/Pk8LMPRGUZnJUJR86wxwjS). To update it, publish `demo/index.html` with
   `demo/engine.js` to that URL; do not create a second page.
+- The owner's overview of every demo is the artifact "Clinic Growth Demo Room"
+  (https://claude.ai/artifact/NSDG1RYKT2VDGGS4CbsriZ). Rebuild with `python scripts/build_hub.py OUT_DIR
+  [LEADS_DIR]` (from `demo/hub-template.html` and the real code) and republish OUT_DIR/index.html with
+  the brochure images and PDFs as files, to that URL. After changing e-mail texts, patient messages or
+  the brochure, rebuild and republish it so the page never shows old wording.
