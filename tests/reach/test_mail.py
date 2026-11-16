@@ -363,3 +363,16 @@ def test_typing_mistakes_in_the_mailbox_settings_are_caught():
     assert problems[1] == "" and problems[4] == ""
     assert problems[2] == "gmaio.com looks mistyped - did you mean gmail.com?"
     assert problems[5] == "the same address as mailbox 4: each mailbox needs its own address"
+
+
+def test_a_clinic_named_after_a_doctor_is_written_to_the_doctor():
+    o = outreach_config()
+    lead = Lead(key="k-dr", business="Dr. Rakesh Fictionrai - Best Orthopedic Surgeon", category_key="ortho_physio",
+                country="IN", market="in", city="Kolkata", emails=["a@b.com"])
+    body = T.first_email(lead, o)[1]
+    assert body.startswith("Dear Dr. Rakesh Fictionrai,") and "team" not in body.split("\n")[0]
+    assert "Dr. Rakesh Fictionrai's clinic" in body
+    plain = Lead(key="k-pl", business="Smile Care Dental Studio", category_key="dental", country="IN", market="in",
+                 city="Kolkata", emails=["a@b.com"])
+    assert "Smile Care Dental Studio" in T.first_email(plain, o)[1]
+    assert T.doctor_of("Dr. Sen's Dental Clinic") == "" and T.doctor_of("Dr Testwala Dental Care") == ""

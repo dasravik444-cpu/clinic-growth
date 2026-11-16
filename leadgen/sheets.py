@@ -304,6 +304,8 @@ class SheetsSync:
         for i in range(0, len(updates), 200):
             self.c.batch_update_values(updates[i:i + 200])
         for i in range(0, len(appends), 400):
+            if i and len(appends) > 8000:
+                time.sleep(1.5)          # a big import: stay under Google's 60 writes a minute
             self.c.append_values(f"{_tab_ref(self.leads_tab)}!A1", appends[i:i + 400])
         return len(appends), len(updates), adopted
 

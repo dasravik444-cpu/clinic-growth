@@ -133,6 +133,21 @@ _GROUP_WORDS = {
 }
 
 
+def doctor_of(business: str) -> str:
+    """The doctor a practice is named after ("Dr. Rakesh Rajput - Best Orthopedic Surgeon" -> "Dr. Rakesh Rajput"),
+    or "" for a practice with a business name ("Smile Care Dental Studio", "Dr. Sen's Dental Clinic")."""
+    from clinicleads.shortlist import doctor_name, is_person
+
+    name = (business or "").strip()
+    if "'" in name or "\u2019" in name or not is_person(name):
+        return ""
+    return doctor_name(name)
+
+
+def possessive(name: str) -> str:
+    return name + ("'" if name.endswith("s") else "'s")
+
+
 def category_group(key: str) -> str:
     k = (key or "").lower()
     for group, words in _GROUP_WORDS.items():
@@ -285,7 +300,12 @@ def context(lead, o: dict, *, mailbox_name: str = "") -> dict:
     }
     if s.get("booking_link"):
         ctx["booking_line"] = f" You can pick a time here: {s['booking_link']}"
+    doctor = doctor_of(lead.business)
+    if doctor:                       # "Dr Shaveta Gupta": write to the doctor, about the doctor's clinic
+        ctx["business"] = possessive(doctor) + " clinic"
     ctx["greeting"] = render(pick(t["greeting_named"] if first else t["greeting_team"], seed + "|g"), ctx)
+    if doctor and not first:
+        ctx["greeting"] = f"Dear {doctor},"
     if usp and 20 <= len(usp) <= 140:
         ctx["intro"] = render(pick(t["intro_usp"], seed + "|i"), ctx)
     else:

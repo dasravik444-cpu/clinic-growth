@@ -90,7 +90,20 @@ tell me, or edit `[texts]` in `config/outreach.toml`.
 The overview PDF that answers a doctor's "yes" is `marketing/brochure.pdf`. It carries the business name
 Aurenflow and no prices; change `marketing/brochure.json` and type `cg brochure` for your own.
 
-## Step 6 - Find the first clinics
+## Step 6 - Put the clinics into the Sheet
+
+The fast way, with the lists Claude already made: save **clinic-leads-india.zip** from the chat into the tablet's
+Download folder, then:
+
+```
+cg import
+```
+
+It adds every Indian clinic to the **Clinics IN** tab (about 33,000; a few minutes). Leads already in the Sheet are
+left as they are, so importing twice adds nothing. The best leads have Priority **High** and are written to first;
+a hospital doctor who also has a clinic says so in the **Signals** column.
+
+The slow way finds them afresh and also reads each clinic's website for more e-mail addresses:
 
 ```
 cg leads

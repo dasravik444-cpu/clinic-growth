@@ -15,6 +15,7 @@
     outlook-login N       sign mailbox N (an Outlook address) in, once
     dns DOMAIN            is a sending domain set up for delivery (SPF, DKIM, DMARC)?
     whatsapp ...          the WhatsApp queue for the tablet (list | next | mark | test)
+    import [FILE ...]     put a ready lead list (clinic-leads-*.zip from Claude, in Download) into the Google Sheet
     clinic ...            the service for a clinic that signed: messages to its own patients
                           (demo | new | list | preview | run | sheet | report | stop)
     pdf                   use your own copies of the overview PDFs (saved in the Download folder)
@@ -644,6 +645,87 @@ def cmd_whatsapp(a) -> int:
         return 5
 
 
+# ---------------------------------------------------------------------------------------------------- import
+def download_files(pattern: str) -> list[Path]:
+    folders = [Path(p) for p in (os.environ.get("DOWNLOAD_DIR", ""), "/sdcard/Download", str(Path.home() / "Downloads"))
+               if p and Path(p).is_dir()]
+    return sorted((f for d in folders for f in d.glob(pattern)), key=lambda f: f.stat().st_mtime)
+
+
+def market_of_prefixes() -> dict[str, str]:
+    """Lead ID prefix (CCU, DEL, LON ...) -> market folder (in, gb ...), from every city file."""
+    out = {}
+    for folder in sorted((ROOT / "config").glob("??")):
+        for path in C.city_files(folder.name):
+            text = path.read_text(encoding="utf-8")
+            for line in text.splitlines():
+                if line.strip().startswith("lead_id_prefix"):
+                    out[line.split("=", 1)[1].strip().strip('"').upper()] = folder.name
+    return out
+
+
+def import_files(paths: list, client_factory=None) -> dict:
+    """Add lead files to the Google Sheet, each lead into its own market's tab ("Clinics IN" ...). Leads already in
+    the Sheet stay exactly as they are; chains and leads without any contact are left out."""
+    import re as _re
+
+    from leadgen.config import load_config
+    from leadgen.importer import import_leads, read_lead_files
+    from leadgen.sheets import SheetsClient, SheetsSync
+
+    rows = read_lead_files([str(p) for p in paths])
+    prefixes = market_of_prefixes()
+    groups: dict[str, list] = {}
+    unknown = 0
+    for r in rows:
+        prefix = _re.sub(r"[^A-Za-z]", "", str(r.get("Lead ID") or "").split("-")[0]).upper()
+        code = prefixes.get(prefix)
+        if code:
+            groups.setdefault(code, []).append(r)
+        else:
+            unknown += 1
+    out = {"rows read": len(rows), "unknown city": unknown}
+    for code, part in sorted(groups.items()):
+        cfg = load_config(str(C.city_files(code)[0]))
+        client = client_factory() if client_factory else SheetsClient(cfg.sheet_id)
+        sync = SheetsSync(client, cfg["sheets"]["leads_tab"], "", "")
+        sync.ensure_tabs()
+        out[cfg["sheets"]["leads_tab"]] = import_leads(sync, cfg, part)
+    return out
+
+
+def cmd_import(a) -> int:
+    settings, o, _ = load_all(need_markets=False)
+    paths = [Path(p) for p in a.files] or download_files("clinic-leads*.zip") + download_files("clinic-leads*.csv")
+    if not paths:
+        print("No clinic-leads....zip in your Download folder. Save the file I sent you there first.")
+        return 1
+    missing = [p for p in paths if not p.is_file()]
+    if missing:
+        print(f"Not found: {', '.join(str(p) for p in missing)}")
+        return 1
+    if not settings.get("WR_SHEET_ID"):
+        print("WR_SHEET_ID is missing: put your Google Sheet's ID into  cg settings  first.")
+        return 1
+    print(f"Adding {', '.join(p.name for p in paths)} to your Google Sheet (a big list takes a few minutes)...")
+    from leadgen.sheets import SheetsError
+
+    try:
+        stats = import_files(paths)
+    except SheetsError as exc:
+        print(f"Google Sheet error: {exc}")
+        return 2
+    except Exception as exc:  # noqa: BLE001 - a damaged key file, say: one clear line instead of a traceback
+        print(f"Could not open the Google Sheet: {type(exc).__name__}: {exc} (cg check shows what is wrong)")
+        return 2
+    for tab, s in stats.items():
+        if isinstance(s, dict):
+            print(f"{tab}: {s.get('added to the sheet', 0)} added, {s.get('already in the sheet', 0)} were there already, "
+                  f"{s.get('left out: big chain', 0)} chains left out")
+    print("Done. The e-mail robot writes to them from the next run ( cg emails --dry-run  shows what it would send).")
+    return 0
+
+
 # ---------------------------------------------------------------------------------------------------- clinics
 def clinics_dir() -> Path:
     return Path(os.environ.get("CG_CLINICS_DIR") or ROOT / "clinics")
@@ -850,6 +932,8 @@ def build_parser() -> argparse.ArgumentParser:
     cl.add_argument("--dry-run", action="store_true", help="run: only count what is due")
     cl.add_argument("--country", default="", help="demo: the clinic's country (IN, US, GB)")
     cl.add_argument("--days", type=int, default=30)
+    im = sub.add_parser("import", help="put a ready lead list into the Google Sheet")
+    im.add_argument("files", nargs="*", help="default: the clinic-leads files in your Download folder")
     sub.add_parser("pdf", help="use your own copies of the overview PDFs (from the Download folder)")
     br = sub.add_parser("brochure", help="build the overview PDF again")
     br.add_argument("rest", nargs=argparse.REMAINDER)
@@ -868,7 +952,8 @@ def main(argv=None) -> int:
     run = {"check": cmd_check, "preview": cmd_preview, "emails": cmd_emails, "test": cmd_test, "leads": cmd_leads,
            "hunt": cmd_hunt, "status": cmd_status, "report": cmd_report, "resume": cmd_resume,
            "outlook-login": cmd_outlook_login, "dns": cmd_dns, "whatsapp": cmd_whatsapp, "brochure": cmd_brochure,
-           "pdf": cmd_pdf, "clinic": cmd_clinic}[a.cmd]
+           "pdf": cmd_pdf, "clinic": cmd_clinic,
+           "import": cmd_import}[a.cmd]
     try:
         if a.cmd in ("emails", "leads", "hunt"):
             try:

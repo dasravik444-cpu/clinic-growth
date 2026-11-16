@@ -134,3 +134,32 @@ def test_each_market_gets_its_own_overview_and_cg_pdf_takes_the_owner_s_copies(t
     assert cli.cmd_pdf(None) == 0
     assert overview_pdf(o, "in").read_bytes() == b"%PDF-1.4 india"
     assert overview_pdf(o, "us").read_bytes() == b"%PDF-1.4 intl"
+
+
+def test_cg_import_puts_each_lead_into_its_market_tab(tmp_path, monkeypatch):
+    import csv as _csv
+
+    from helpers import FakeSheetsSession
+    from leadgen.sheets import LEAD_COLUMNS, SheetsClient
+
+    def row(lid, name, email="", phone="+91 98300 00001", key=None):
+        return {"Lead ID": lid, "Business Name": name, "Category": "Dental clinic", "Emails": email, "Phones": phone,
+                "Key": key or f"ov:{lid}", "Status": ""}
+    path = tmp_path / "clinic-leads-test.csv"
+    with path.open("w", newline="", encoding="utf-8") as fh:
+        w = _csv.DictWriter(fh, fieldnames=LEAD_COLUMNS)
+        w.writeheader()
+        for r in (row("CCU-1", "Smile Dental", "hello@smiledental.in"), row("DEL-7", "Delhi Dental Care"),
+                  row("CCU-2", "Clove Dental Salt Lake"), row("LON-3", "Harley Smile Ltd", phone="+44 20 7946 0000"),
+                  row("XYZ-1", "Nowhere Clinic"), row("CCU-4", "No Contact Clinic", phone="")):
+            w.writerow({c: r.get(c, "") for c in LEAD_COLUMNS})
+    session = FakeSheetsSession()
+    stats = cli.import_files([path], client_factory=lambda: SheetsClient("sheet-id", session=session))
+    assert stats["unknown city"] == 1 and stats["rows read"] == 6
+    india = [r[2] for r in session.tabs["Clinics IN"]["rows"][1:]]
+    assert india == ["Smile Dental", "Delhi Dental Care"]                       # the chain and the empty one left out
+    assert [r[2] for r in session.tabs["Clinics GB"]["rows"][1:]] == ["Harley Smile Ltd"]
+    again = cli.import_files([path], client_factory=lambda: SheetsClient("sheet-id", session=session))
+    assert again["Clinics IN"]["already in the sheet"] == 2                     # importing twice adds nothing
+    monkeypatch.setenv("DOWNLOAD_DIR", str(tmp_path))
+    assert cli.download_files("clinic-leads*.csv") == [path]

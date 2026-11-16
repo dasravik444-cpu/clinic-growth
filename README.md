@@ -38,6 +38,7 @@ cg on / cg off        the robot (e-mails hourly in clinic hours, a lead search e
 cg status             mailboxes (warm-up, pauses), leads, e-mails, replies
 cg check              test the settings, the Sheet, every mailbox and our own e-mails
 cg preview dental     show the e-mails a dental clinic would get
+cg import             put a ready lead list (clinic-leads-*.zip from the chat, in Download) into the Sheet
 cg leads              find clinics in the next city now, into the Google Sheet
 cg test a@x b@y       spam test: the next first e-mail from every mailbox, only to your own addresses
 cg emails --dry-run   prepare the e-mails into the Sheet's "Email Preview" tab, send nothing
