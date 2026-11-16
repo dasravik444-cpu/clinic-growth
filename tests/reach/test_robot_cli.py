@@ -163,3 +163,12 @@ def test_cg_import_puts_each_lead_into_its_market_tab(tmp_path, monkeypatch):
     assert again["Clinics IN"]["already in the sheet"] == 2                     # importing twice adds nothing
     monkeypatch.setenv("DOWNLOAD_DIR", str(tmp_path))
     assert cli.download_files("clinic-leads*.csv") == [path]
+
+
+def test_cg_check_asks_for_a_postal_address_only_where_the_law_does(monkeypatch, capsys):
+    monkeypatch.setattr(S, "load", lambda *a, **k: {"MARKETS": "in", "SENDER_NAME": "A", "SENDER_BUSINESS": "B"})
+    cli.cmd_check(None)
+    assert "postal address" not in capsys.readouterr().out
+    monkeypatch.setattr(S, "load", lambda *a, **k: {"MARKETS": "in,us", "SENDER_NAME": "A", "SENDER_BUSINESS": "B"})
+    cli.cmd_check(None)
+    assert "[!!] postal address missing (POSTAL_ADDRESS): the law in United States" in capsys.readouterr().out

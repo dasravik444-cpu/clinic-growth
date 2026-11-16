@@ -42,7 +42,7 @@ What the owner told Claude on 11-13 Nov 2026, in their words where quoted:
   its own outreach mailboxes, none shared with WorldReach or the other robots (owner's decision,
   13 Nov 2026, on Claude's recommendation).
 - WhatsApp is never automated from a personal number; only the official Business API with opt-in.
-- Tests: `python -m pytest -q` (155) and `node --test demo/engine.test.js` (10).
+- Tests: `python -m pytest -q` (158) and `node --test demo/engine.test.js` (10).
 - Leads from a Claude cloud session: `python scripts/cloud_leads.py fetch`, then `run --all`, then
   `python -m clinicleads shortlist`. It needs only the Overture Maps storage host, which the default
   network already allows. Clinic websites cannot be read from a cloud session, so e-mails found only

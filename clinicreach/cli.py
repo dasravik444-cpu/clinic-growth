@@ -183,8 +183,12 @@ def cmd_check(_a) -> int:
         return 1
     s = o["sender"]
     line(bool(s["name"] and s["business"]), f"sender: {s['name'] or 'SENDER_NAME missing'}, {s['business'] or 'SENDER_BUSINESS missing'}")
-    line(bool(s["postal_address"]), "postal address " + ("set" if s["postal_address"] else
-         "missing (POSTAL_ADDRESS): US and Canadian law require it in every sales e-mail"))
+    from leadgen.country import PACKS
+
+    need_address = [m.name for m in markets if PACKS[m.country].rules.postal_address_required]
+    if need_address or s["postal_address"]:
+        line(bool(s["postal_address"]), "postal address " + ("set" if s["postal_address"] else
+             f"missing (POSTAL_ADDRESS): the law in {', '.join(need_address)} asks for it in every sales e-mail"))
     line(bool(s["phone"]), "WhatsApp / phone " + ("set" if s["phone"] else "not set (SENDER_PHONE): the e-mails then show none"),
          warn=True)
     print(f"     markets: {', '.join(f'{m.name} ({len(m.cities)} cities)' for m in markets)};  "
