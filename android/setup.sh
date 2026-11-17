@@ -82,6 +82,20 @@ termux_packages() {
 
 ubuntu() { proot-distro login "$NAME" -- "$@"; }
 
+# GitHub, three tries. A Wi-Fi hiccup or a network change can leave Ubuntu without working internet names for a
+# moment ("Could not resolve host"): its DNS is set again before each new try.
+from_github() {
+  local n
+  for n in 1 2 3; do
+    "$@" && return 0
+    [ "$n" = 3 ] && break
+    echo "(GitHub did not answer - trying again in 10 seconds)"
+    sleep 10
+    curl -fsSL --retry 3 "$RAW/android/dns.sh" | proot-distro login "$NAME" -- bash -s || true
+  done
+  return 1
+}
+
 main() {
   echo "== 1/5 Access to your Download folder (tap ALLOW if Android asks)..."
   [ -d "$HOME/storage" ] || termux-setup-storage || true
@@ -101,9 +115,11 @@ main() {
       --no-install-recommends $UBUNTU_PACKAGES
   fi
   if ubuntu test -d "$DIR/.git"; then
-    ubuntu git -C "$DIR" pull --ff-only
+    from_github ubuntu git -C "$DIR" pull --ff-only ||
+      { echo "Could not reach GitHub just now. Clinic Growth is still installed and works: try this line again later."; exit 1; }
   else
-    ubuntu git clone "$REPO" "$DIR"
+    from_github ubuntu git clone "$REPO" "$DIR" ||
+      { echo "Could not reach GitHub just now (check the Wi-Fi), then paste the setup line again."; exit 1; }
   fi
 
   echo "== 5/5 The  cg  command..."
