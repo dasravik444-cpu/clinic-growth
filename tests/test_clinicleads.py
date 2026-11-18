@@ -174,6 +174,10 @@ def test_doctor_names_and_domains():
     assert sl.doctor_name("Dr Sanjiv's Epione Heart Clinic") == "Dr Sanjiv"
     assert sl.doctor_name("Dr. Rashmi Sharma CONSULTANT DERMATOLOGY | Fortis") == "Dr. Rashmi Sharma"
     assert sl.doctor_name("Shining Pearl Dental Clinic - Dr. Kuldip Fictionaya") == "Dr. Kuldip Fictionaya"
+    assert sl.doctor_name("Dr Yugandhar Fictionaya MD; FRCR Clinical Oncologist") == "Dr Yugandhar Fictionaya"
+    assert sl.doctor_name("Dr. Apeksha Fictionaya @smiledentals") == "Dr. Apeksha Fictionaya"
+    assert sl.doctor_name("Dr. Md. Rafiqul Fictionaya") == "Dr. Md. Rafiqul Fictionaya"
+    assert sl.doctor_name("Dr. Radheshyam Fictionaya Pearly Whites") == "Dr. Radheshyam Fictionaya"
     assert not sl.is_person("Dr. Sanoj Bone Setting Treatment and Training Centre")
     assert not sl.is_person("Dr.Poddar Poly Clinic")
     assert sl.is_person("Dr.Santanu Fictionjee")

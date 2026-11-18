@@ -16,7 +16,7 @@ from collections import Counter, defaultdict
 from urllib.parse import urlsplit
 
 from . import crossmatch as cm
-from .model import is_owner_named, norm_text, person_tokens
+from .model import _DEGREES, is_owner_named, norm_text, person_tokens
 
 HIGH_VALUE = {"Dental clinic", "Skin / Hair / Cosmetic clinic", "Eye clinic", "Fertility / Women's clinic",
               "Orthopaedic / Physiotherapy clinic"}
@@ -42,7 +42,7 @@ NOT_A_NAME = set("""clinic clinics hospital hospitals dental dentist dentistry h
     gastroenterologist nephrologist pulmonologist diabetologist endocrinologist sexologist trichologist
     radiologist pathologist anaesthetist rheumatologist obstetrician bone setting poly training therapy
     wellness point path scan imaging rehab physio homoeo ayurvedic dentistry hospital nursing chamber chambers
-    clinik dentals derma skincare eyecare speciality multispecialty""".split())
+    clinik dentals derma skincare eyecare speciality multispecialty pearly whites""".split())
 ROSTER_MIN = 4          # doctor-named listings on one domain before it counts as a hospital roster
 CLINIC_COLUMNS = ["Score", "Why", "City", "Country", "Review offer", "Business Name", "Category", "Owner-named",
                   "Phones", "Emails", "Website", "Facebook", "Instagram", "WhatsApp", "Area", "Address",
@@ -65,13 +65,15 @@ def doctor_name(listing: str) -> str:
         found = doctor_name(listing[at:]) if at else ""
         if found:
             return found
-    name = re.split(r"\s+[-|–:(]\s*|[-–|:]\s+|,|\bbest\b|[’']s\b", listing, maxsplit=1, flags=re.I)[0].strip()
+    name = re.split(r"\s+[-|–:(@]\s*|[-–|:]\s+|[,;]|\bbest\b|[’']s\b", listing, maxsplit=1, flags=re.I)[0].strip()
     if not name:                                   # 'Best Cardiologist - Dr. Tapan Sinha'
         m = re.search(r"\b(dr\.?\s+[a-z][a-z .']+)", listing, re.I)
         name = m.group(1).strip() if m else ""
     kept = []
     for word in name.split():                      # 'Dr. Rashmi Sharma CONSULTANT DERMATOLOGY' stops at CONSULTANT
         if norm_text(word) in NOT_A_NAME:
+            break
+        if len(kept) >= 2 and word.isupper() and _DEGREES.fullmatch(word.strip(".,")):   # 'MD', not 'Md.' (Mohammed)
             break
         kept.append(word)
     return " ".join(kept)

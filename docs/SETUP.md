@@ -103,6 +103,21 @@ It adds every Indian clinic to the **Clinics IN** tab (about 33,000; a few minut
 left as they are, so importing twice adds nothing. The best leads have Priority **High** and are written to first;
 a hospital doctor who also has a clinic says so in the **Signals** column.
 
+### The doctor tables: degrees, experience, hospitals
+
+The doctor tables from the chat (**doctors-0 ... doctors-6 .xlsx**) are for your calls. Their researched columns
+(degrees, the year qualified, years of experience, hospitals, registration number) hold only what a public page
+says, with the page in **Research sources**; a blank means nothing was published. To fill more of them from the
+doctors' own websites, save the tables into Download and type:
+
+```
+cg research
+```
+
+It reads up to 300 websites per run (about 15 minutes; keep the tablet on charge) and writes
+**doctors-...-researched.xlsx** next to each table in Download. Type it again to continue with the next websites;
+a website is read only once. A site that asks robots not to read it is left alone.
+
 The slow way finds them afresh and also reads each clinic's website for more e-mail addresses:
 
 ```

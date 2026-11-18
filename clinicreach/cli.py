@@ -19,6 +19,8 @@
     clinic ...            the service for a clinic that signed: messages to its own patients
                           (demo | new | list | preview | run | sheet | report | stop)
     pdf                   use your own copies of the overview PDFs (saved in the Download folder)
+    research [FILE ...]   read the doctors' own websites for degrees, experience and hospitals (doctor tables
+                          doctors-*.xlsx from Claude, in Download) into doctors-...-researched.xlsx
     brochure              build marketing/brochure.pdf again (after changing marketing/brochure.json)
 """
 from __future__ import annotations
@@ -848,6 +850,32 @@ def print_sheet(s: dict) -> None:
 
 
 # ---------------------------------------------------------------------------------------------------- brochure
+def cmd_research(a) -> int:
+    """The doctors' own websites, read for what the doctor tables lack. Writes NAME-researched.xlsx beside each table
+    in the Download folder; run it again to continue (each site is read once)."""
+    from clinicleads import research as R
+
+    paths = [Path(p) for p in a.files] or [f for f in download_files("doctors-*.xlsx")
+                                           if not f.stem.endswith("-researched")]
+    if not paths:
+        print("No doctors-....xlsx in your Download folder. Save the doctor tables I sent you there first.")
+        return 1
+    missing = [p for p in paths if not p.is_file()]
+    if missing:
+        print(f"Not found: {', '.join(str(p) for p in missing)}")
+        return 1
+    print(f"Reading the doctors' own websites, at most {a.max} this time (about 10 seconds each, "
+          f"{a.workers} at once). Nothing is guessed: what a site does not publish stays blank.")
+    stats = R.run_files(sorted(paths, key=lambda p: p.name), limit=a.max, workers=a.workers,
+                        cache_path=S.data_dir() / "research-cache.json")
+    print(f"Done: {stats['sites read']} website{'' if stats['sites read'] == 1 else 's'} read, "
+          f"{stats['rows filled']} doctor{'' if stats['rows filled'] == 1 else 's'} got new details.")
+    for f in stats["files"]:
+        print(f"  {f}")
+    print("Open the -researched files in Sheets. Run  cg research  again to continue with the next websites.")
+    return 0
+
+
 def cmd_pdf(_a) -> int:
     """Your own copies of the overview (with your phone and e-mail) from the Download folder: the PDFs clinics get.
     A file whose name has "international" in it is the edition for clinics outside India."""
@@ -939,6 +967,10 @@ def build_parser() -> argparse.ArgumentParser:
     im = sub.add_parser("import", help="put a ready lead list into the Google Sheet")
     im.add_argument("files", nargs="*", help="default: the clinic-leads files in your Download folder")
     sub.add_parser("pdf", help="use your own copies of the overview PDFs (from the Download folder)")
+    rs = sub.add_parser("research", help="read the doctors' own websites for degrees, experience and hospitals")
+    rs.add_argument("files", nargs="*", help="default: the doctors-*.xlsx tables in your Download folder")
+    rs.add_argument("--max", type=int, default=300, help="at most this many websites this time")
+    rs.add_argument("--workers", type=int, default=4, help="websites read at once")
     br = sub.add_parser("brochure", help="build the overview PDF again")
     br.add_argument("rest", nargs=argparse.REMAINDER)
     rb = sub.add_parser("robot", help="the robot's timetable: serve | status | log | run JOB")
@@ -957,7 +989,7 @@ def main(argv=None) -> int:
            "hunt": cmd_hunt, "status": cmd_status, "report": cmd_report, "resume": cmd_resume,
            "outlook-login": cmd_outlook_login, "dns": cmd_dns, "whatsapp": cmd_whatsapp, "brochure": cmd_brochure,
            "pdf": cmd_pdf, "clinic": cmd_clinic,
-           "import": cmd_import}[a.cmd]
+           "import": cmd_import, "research": cmd_research}[a.cmd]
     try:
         if a.cmd in ("emails", "leads", "hunt"):
             try:

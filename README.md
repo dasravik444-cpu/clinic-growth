@@ -10,6 +10,7 @@ agency projects; it shares no data with them.
 | **Lead finder** (`leadgen/`) | The WorldReach lead finder, copied here: open map data (Overture Maps, OpenStreetMap), each practice's own website, e-mail hunt, Google Sheet. Set up for 8 kinds of medical practice in 27 capital cities. | 97 tests pass. Run for real on 13 Nov 2026 from open map data: 61,025 clinics in the 27 cities, 29,538 with e-mail. Website reading has not run for clinics yet. |
 | **Sending** (`clinicreach/`, command `cg`) | The WorldReach sending engine, copied here: Gmail, Outlook and own-domain mailboxes with warm-up and brakes, follow-ups, replies, the Google Sheet, the WhatsApp queue, the robot's timetable, the overview PDF. Clinic wording, no review offers, hospitals never written to. | 37 tests pass against pretend mailboxes and a pretend Sheet. **Has not sent a real e-mail or touched a real Sheet from this project.** |
 | **Shortlist** (`clinicleads/`) | Scores the clinics, and finds hospital doctors who run their own clinic by matching hospital "find a doctor" listings to clinics named after the same doctor. | 10 tests pass; run on the real lists. Matches are candidates to confirm. The US registry reader has never run live. |
+| **Doctor research** (`clinicleads/research.py`, `cg research`) | Reads each doctor's own website for degrees, the year qualified, experience, hospitals and registration number, only where the page names the doctor, with the page as source; never overwrites. | 8 tests pass against pretend sites, and it was run with the real network client against a local test site (robots.txt obeyed). **Not yet run on real clinic websites**: a cloud session cannot reach them. |
 
 | Read | For |
 |---|---|
@@ -39,6 +40,7 @@ cg status             mailboxes (warm-up, pauses), leads, e-mails, replies
 cg check              test the settings, the Sheet, every mailbox and our own e-mails
 cg preview dental     show the e-mails a dental clinic would get
 cg import             put a ready lead list (clinic-leads-*.zip from the chat, in Download) into the Sheet
+cg research           read the doctors' own websites for degrees, experience and hospitals (doctor tables in Download)
 cg leads              find clinics in the next city now, into the Google Sheet
 cg test a@x b@y       spam test: the next first e-mail from every mailbox, only to your own addresses
 cg emails --dry-run   prepare the e-mails into the Sheet's "Email Preview" tab, send nothing

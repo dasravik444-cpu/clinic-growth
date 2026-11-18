@@ -1,9 +1,9 @@
 """The lead table the owner works from: one row per clinic, with the doctor, the speciality, the degrees the listing
 shows, the hospital the doctor is also listed at, every contact route, and which of our services fit and why.
 
-Everything comes from the listing itself or from rules written here; nothing is guessed about the person. Age is
-not published in any of the sources we read, and degrees only when the clinic put them in its own name, so those
-columns stay empty unless the data has them (the "Read me" sheet says how to look a doctor up by hand).
+Everything comes from the listing itself, from rules written here, or from research (research.py): what a public
+page says about the doctor, with the page it came from. Nothing is guessed about the person: a column stays empty
+unless a source has it (the "Read me" sheet says how to look a doctor up by hand).
 """
 from __future__ import annotations
 
@@ -12,10 +12,16 @@ import re
 from . import shortlist as sl
 from .model import norm_text
 
+# Filled by research (clinicleads/research.py and web searches), only with what a page publishes; blank otherwise.
+RESEARCH_COLUMNS = ["Degrees (researched)", "Qualified (year, as published)", "Approx. age",
+                    "Experience (as published)", "Hospitals (researched)", "Research: same doctor?",
+                    "Registration no. (as published)", "Research notes", "Research sources", "Researched on"]
 COLUMNS = ["Priority", "Lead ID", "Doctor", "Clinic / listing", "Speciality", "Degrees (as listed)",
-           "Also listed at hospital", "City", "Area", "Address", "Phone", "Phone type", "WhatsApp", "E-mail",
-           "Website", "Facebook", "Instagram", "Services that fit (our suggestion)", "Why these", "Extra",
-           "Google Maps", "Where the contacts came from", "Key"]
+           "Degrees (researched)", "Qualified (year, as published)", "Approx. age", "Experience (as published)",
+           "Hospitals (researched)", "Also listed at hospital", "City", "Area", "Address", "Phone", "Phone type",
+           "WhatsApp", "E-mail", "Website", "Facebook", "Instagram", "Services that fit (our suggestion)", "Why these",
+           "Extra", "Research: same doctor?", "Registration no. (as published)", "Research notes", "Research sources",
+           "Researched on", "Google Maps", "Where the contacts came from", "Key"]
 READ_ME = [
     ("What this is", "Every clinic found for these cities, best first. One row per clinic."),
     ("Priority", "High: a hospital doctor with an own clinic, or a strong lead with e-mail. Medium: has e-mail. "
@@ -26,8 +32,18 @@ READ_ME = [
     ("Degrees (as listed)", "Only when the clinic wrote them into its own name (\"Dr X, MBBS, MD\"). Few do. To "
                             "check a doctor's degrees and the year they qualified, search their name on the "
                             "National Medical Commission's Indian Medical Register (nmc.org.in), by hand."),
-    ("Approx. age", "Not in this table: no public source we read gives it. The year of the first degree on the "
-                    "medical register (above) is the nearest honest guide (most qualify at about 23-24)."),
+    ("Researched columns", "Degrees (researched), Qualified, Experience, Hospitals (researched), Registration no.: "
+                           "what a public page says about the doctor (their own website, doctor directories, hospital "
+                           "pages), in the page's words. Where sites disagree, every figure is shown with the site's "
+                           "name. Blank means nothing published was found: nothing is guessed. The pages are in "
+                           "Research sources. cg research fills more from the doctors' own websites."),
+    ("Approx. age", "Blank unless a page publishes the age or year of birth (none found so far does). The year the "
+                    "doctor qualified (Qualified column, or the NMC register) is the nearest real fact: most qualify "
+                    "at about 23-24."),
+    ("Research: same doctor?", "Sure: the page names this clinic, its website or its phone. Likely: same name and "
+                               "same field. Unsure: the name is common or two pages disagree; ask on the call."),
+    ("Registration no.", "As the page published it. Check it on the NMC's Indian Medical Register (nmc.org.in) or "
+                         "the state dental council before relying on it."),
     ("Also listed at hospital", "The doctor's name also appears on that hospital group's own website (Apollo, "
                                 "Fortis, Max ...). A name match, not a confirmation: two doctors can share a name."),
     ("Phone type", "Mobile or landline, from the number itself. A mobile number may be on WhatsApp; that is not "
@@ -255,7 +271,10 @@ def write_xlsx(rows: list[dict], path: str, title: str) -> int:
         cell.font = Font(bold=True, color="FFFFFF")
         cell.fill = head
     widths = {"Priority": 9, "Lead ID": 11, "Doctor": 24, "Clinic / listing": 34, "Speciality": 22,
-              "Degrees (as listed)": 14, "Also listed at hospital": 22, "City": 12, "Area": 16, "Address": 34,
+              "Degrees (as listed)": 14, "Degrees (researched)": 36, "Qualified (year, as published)": 22,
+              "Approx. age": 10, "Experience (as published)": 24, "Hospitals (researched)": 40,
+              "Research: same doctor?": 28, "Registration no. (as published)": 22, "Research notes": 40,
+              "Research sources": 50, "Researched on": 12, "Also listed at hospital": 22, "City": 12, "Area": 16, "Address": 34,
               "Phone": 18, "Phone type": 22, "WhatsApp": 14, "E-mail": 28, "Website": 28, "Facebook": 22,
               "Instagram": 18, "Services that fit (our suggestion)": 46, "Why these": 60, "Extra": 40,
               "Google Maps": 20, "Where the contacts came from": 30, "Key": 14}

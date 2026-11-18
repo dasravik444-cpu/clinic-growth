@@ -16,6 +16,7 @@
 #   cg outlook-login N    sign an Outlook mailbox in, once
 #   cg whatsapp           today's WhatsApp messages, one tap each in WhatsApp Business
 #   cg leads / cg hunt    run the lead search / the e-mail hunt now
+#   cg research           read the doctors' own websites (degrees, experience, hospitals) into the doctor tables
 #   cg run JOB            one of the robot's jobs now: emails, leads, hunt, update or backup
 #   cg update             the newest version
 #
@@ -160,7 +161,7 @@ case "${1:-help}" in
                curl -fsSL --retry 5 "https://raw.githubusercontent.com/dasravik444-cpu/clinic-growth/main/android/setup.sh" | bash -s update ||
                  { echo "The update stopped - check the internet and type  cg update  again."; exit 1; }
                echo "If the robot is on, it takes the new version at its next job (or now:  cg off  then  cg on )." ;;
-  leads|emails|hunt)
+  leads|emails|hunt|research)
                termux-wake-lock 2>/dev/null; inside "$@" ;;
   help|-h|--help|"")
                sed -n '2,22p' "$SELF" | sed 's/^# \{0,1\}//' ;;
