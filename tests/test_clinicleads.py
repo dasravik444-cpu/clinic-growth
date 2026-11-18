@@ -173,6 +173,10 @@ def test_doctor_names_and_domains():
     assert not sl.is_person("Dr Sanjiv's Epione Heart Clinic") and not sl.is_person("Kidney Stone Specialist Doctor in Delhi")
     assert sl.doctor_name("Dr Sanjiv's Epione Heart Clinic") == "Dr Sanjiv"
     assert sl.doctor_name("Dr. Rashmi Sharma CONSULTANT DERMATOLOGY | Fortis") == "Dr. Rashmi Sharma"
+    assert sl.doctor_name("Shining Pearl Dental Clinic - Dr. Kuldip Fictionaya") == "Dr. Kuldip Fictionaya"
+    assert not sl.is_person("Dr. Sanoj Bone Setting Treatment and Training Centre")
+    assert not sl.is_person("Dr.Poddar Poly Clinic")
+    assert sl.is_person("Dr.Santanu Fictionjee")
     assert not sl.is_person("Dr Smile Dental Clinic") and not sl.is_person("Dr. Tooth Dental Studio")
     assert cm.match_strength("Dr Sanjiv Fictionrao", "Dr. Kiran's Fictionrao Clinic") == ""       # 's is not an initial
     profiles = [lead(f"Dr. {n}", website=f"https://www.eka.care/doctor/{i}") for i, n in enumerate(["A Bee", "Cee Dee", "Eff Gee", "Aitch Eye"])]

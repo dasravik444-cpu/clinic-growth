@@ -40,7 +40,9 @@ NOT_A_NAME = set("""clinic clinics hospital hospitals dental dentist dentistry h
     delhi kolkata mumbai bangalore bengaluru chennai hyderabad london dubai singapore advanced family
     ophthalmologist endodontist orthodontist cosmetologist physiotherapist psychiatrist psychologist oncologist
     gastroenterologist nephrologist pulmonologist diabetologist endocrinologist sexologist trichologist
-    radiologist pathologist anaesthetist rheumatologist obstetrician""".split())
+    radiologist pathologist anaesthetist rheumatologist obstetrician bone setting poly training therapy
+    wellness point path scan imaging rehab physio homoeo ayurvedic dentistry hospital nursing chamber chambers
+    clinik dentals derma skincare eyecare speciality multispecialty""".split())
 ROSTER_MIN = 4          # doctor-named listings on one domain before it counts as a hospital roster
 CLINIC_COLUMNS = ["Score", "Why", "City", "Country", "Review offer", "Business Name", "Category", "Owner-named",
                   "Phones", "Emails", "Website", "Facebook", "Instagram", "WhatsApp", "Area", "Address",
@@ -56,7 +58,13 @@ def domain(url: str) -> str:
 
 
 def doctor_name(listing: str) -> str:
-    """'Dr. Tapan Sinha - Best Cardiologist in Kolkata' -> 'Dr. Tapan Sinha'."""
+    """'Dr. Tapan Sinha - Best Cardiologist in Kolkata' -> 'Dr. Tapan Sinha'. The name starts at the title:
+    'Shining Pearl Dental Clinic - Dr. Kuldip M' -> 'Dr. Kuldip M'."""
+    starts = [m.start() for m in re.finditer(r"\b(?:dr|prof)\b\.?", listing or "", re.I)]
+    for at in starts[1:] if starts and starts[0] == 0 else starts:   # a later "Dr. X" when the name opens elsewhere
+        found = doctor_name(listing[at:]) if at else ""
+        if found:
+            return found
     name = re.split(r"\s+[-|–:(]\s*|[-–|:]\s+|,|\bbest\b|[’']s\b", listing, maxsplit=1, flags=re.I)[0].strip()
     if not name:                                   # 'Best Cardiologist - Dr. Tapan Sinha'
         m = re.search(r"\b(dr\.?\s+[a-z][a-z .']+)", listing, re.I)
