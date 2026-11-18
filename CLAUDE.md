@@ -28,6 +28,9 @@ What the owner told Claude on 11-13 Nov 2026, in their words where quoted:
   `show_reason` on. Review requests only where `REVIEW_COUNTRIES` allows (US, GB); India gets private
   feedback. The demo clinic (`cg clinic demo`) uses invented patients at example.com; a test run goes to
   the owner only (`--to`). Patient lists live in `clinics/`, which never goes into git.
+- The owner's working lead table is `clinicleads/profile.py` (doctor, speciality, degrees as listed, hospital,
+  phone type, services that fit). It never guesses: age is not in any source we read and stays out, degrees
+  only when the listing names them. Build it from the lead exports; hand it over as split .xlsx files.
 - The overview PDF has two editions: `marketing/brochure.json` (India, no reviews) and
   `brochure-intl.json`. Rebuild both with `python marketing/build_brochure.py --all`.
 - The repository must stay public: the tablet installs from it (`android/setup.sh`).
@@ -42,7 +45,7 @@ What the owner told Claude on 11-13 Nov 2026, in their words where quoted:
   its own outreach mailboxes, none shared with WorldReach or the other robots (owner's decision,
   13 Nov 2026, on Claude's recommendation).
 - WhatsApp is never automated from a personal number; only the official Business API with opt-in.
-- Tests: `python -m pytest -q` (158) and `node --test demo/engine.test.js` (10).
+- Tests: `python -m pytest -q` (162) and `node --test demo/engine.test.js` (10).
 - Leads from a Claude cloud session: `python scripts/cloud_leads.py fetch`, then `run --all`, then
   `python -m clinicleads shortlist`. It needs only the Overture Maps storage host, which the default
   network already allows. Clinic websites cannot be read from a cloud session, so e-mails found only

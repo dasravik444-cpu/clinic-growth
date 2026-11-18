@@ -37,7 +37,10 @@ NOT_A_NAME = set("""clinic clinics hospital hospitals dental dentist dentistry h
     consultant senior surgery orthopaedic orthopedic ortho gynecologist gynaecologist cardiologist dermatologist
     neurologist urologist pediatrician paediatrician physician ent ivf fertility laser cosmetic implant implants
     smile smiles kidney stone spine knee joint pain piles cancer diabetes thyroid treatment india indian
-    delhi kolkata mumbai bangalore bengaluru chennai hyderabad london dubai singapore advanced family""".split())
+    delhi kolkata mumbai bangalore bengaluru chennai hyderabad london dubai singapore advanced family
+    ophthalmologist endodontist orthodontist cosmetologist physiotherapist psychiatrist psychologist oncologist
+    gastroenterologist nephrologist pulmonologist diabetologist endocrinologist sexologist trichologist
+    radiologist pathologist anaesthetist rheumatologist obstetrician""".split())
 ROSTER_MIN = 4          # doctor-named listings on one domain before it counts as a hospital roster
 CLINIC_COLUMNS = ["Score", "Why", "City", "Country", "Review offer", "Business Name", "Category", "Owner-named",
                   "Phones", "Emails", "Website", "Facebook", "Instagram", "WhatsApp", "Area", "Address",
@@ -54,7 +57,7 @@ def domain(url: str) -> str:
 
 def doctor_name(listing: str) -> str:
     """'Dr. Tapan Sinha - Best Cardiologist in Kolkata' -> 'Dr. Tapan Sinha'."""
-    name = re.split(r"\s+[-|–:(]\s*|,|\bbest\b|[’']s\b", listing, maxsplit=1, flags=re.I)[0].strip()
+    name = re.split(r"\s+[-|–:(]\s*|[-–|:]\s+|,|\bbest\b|[’']s\b", listing, maxsplit=1, flags=re.I)[0].strip()
     if not name:                                   # 'Best Cardiologist - Dr. Tapan Sinha'
         m = re.search(r"\b(dr\.?\s+[a-z][a-z .']+)", listing, re.I)
         name = m.group(1).strip() if m else ""

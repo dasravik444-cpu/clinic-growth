@@ -9,7 +9,7 @@ import smtplib
 from email import policy
 
 import pytest
-from outreach_helpers import FakeMX, outreach_config
+from outreach_helpers import SENDER, FakeMX, outreach_config
 
 from clinicreach import settings as S
 from clinicreach.mail import build_message, open_mailbox
@@ -376,3 +376,14 @@ def test_a_clinic_named_after_a_doctor_is_written_to_the_doctor():
                  city="Kolkata", emails=["a@b.com"])
     assert "Smile Care Dental Studio" in T.first_email(plain, o)[1]
     assert T.doctor_of("Dr. Sen's Dental Clinic") == "" and T.doctor_of("Dr Testwala Dental Care") == ""
+
+
+def test_the_whatsapp_number_is_in_the_first_and_last_e_mail_when_set():
+    o = outreach_config()
+    lead = Lead(key="k-wa", business="Smile Care Dental Studio", category_key="dental", country="IN", market="in",
+                city="Kolkata", emails=["a@b.com"])
+    phone = SENDER["phone"]
+    assert f"Or message me on WhatsApp: {phone}." in T.first_email(lead, o)[1]
+    assert f"or message me on WhatsApp: {phone}." in T.follow_up(lead, o, 2)
+    bare = outreach_config(sender={**SENDER, "phone": ""})
+    assert "message me on WhatsApp" not in T.first_email(lead, bare)[1]

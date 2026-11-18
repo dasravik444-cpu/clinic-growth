@@ -24,7 +24,7 @@ import string
 from leadgen.country import PACKS
 
 _WHAT = ("We set that up for your clinic: a receptionist that answers every call and WhatsApp message, day and night, "
-         "books the visit into your diary and sends the reminder. {extra} It handles appointments only and never "
+         "books the visit and sends the reminder. {extra} It handles appointments only and never "
          "gives medical advice; anything clinical is passed to you.")
 
 # ----------------------------------------------------------------------------------------------- per practice type
@@ -164,7 +164,7 @@ EN = {
 
 {pain} {what}
 
-{cta}
+{cta}{whatsapp_cta}
 
 {sender_first}
 {footer}""",
@@ -179,7 +179,7 @@ A short follow-up on my note about {topic}. In plain numbers: {math}. You decide
 {footer}""",
         """{greeting}
 
-Last note from me. If this is not a priority for {business} right now, no problem at all, and I won't write again. If it is, reply "yes" and I'll send you the two-page overview.
+Last note from me. If this is not a priority for {business} right now, no problem at all, and I won't write again. If it is, reply "yes" and I'll send you the two-page overview{whatsapp_or}.
 
 All the best,
 {sender_first}
@@ -232,7 +232,7 @@ LANGS = {"en": EN}
 PLACEHOLDERS = {"greeting", "intro", "pain", "what", "math", "topic", "cta", "cta2", "business", "first_name",
                 "first_name_or_there", "audience", "people", "place", "usp", "sender_name", "sender_first",
                 "sender_business", "sender_phone", "sender_address", "sender_website", "footer", "phone_line",
-                "address_line", "source_line", "booking_line", "whatsapp_line"}
+                "address_line", "source_line", "booking_line", "whatsapp_line", "whatsapp_cta", "whatsapp_or"}
 
 
 class _Keep(dict):
@@ -297,6 +297,8 @@ def context(lead, o: dict, *, mailbox_name: str = "") -> dict:
         "phone_line": f"\nWhatsApp / phone: {phone}" if phone else "",
         "address_line": f"{address}\n\n" if address else "\n",
         "booking_line": "", "whatsapp_line": f", or message me on WhatsApp: {phone}" if phone else "",
+        "whatsapp_cta": f" Or message me on WhatsApp: {phone}." if phone else "",
+        "whatsapp_or": f", or message me on WhatsApp: {phone}" if phone else "",
     }
     if s.get("booking_link"):
         ctx["booking_line"] = f" You can pick a time here: {s['booking_link']}"

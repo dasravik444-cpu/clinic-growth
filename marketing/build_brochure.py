@@ -346,7 +346,8 @@ def contact_html(d: dict, light: bool = False) -> str:
     color = "#fff" if light else GOLD
     items = []
     if d.get("phone"):
-        items.append(f'<span>{icon("phone", 17, color)}{esc(d["phone"])}</span>')
+        items.append(f'<span>{icon("phone", 17, color)}{esc(d["phone"])} <small style="font-weight:500;opacity:.8">'
+                     f'call or WhatsApp</small></span>')
     if d.get("email"):
         items.append(f'<span>{icon("mail", 17, color)}{esc(d["email"])}</span>')
     if not items:

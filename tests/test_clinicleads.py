@@ -205,3 +205,57 @@ def test_shortlist_splits_scores_and_matches(tmp_path):
     wb = load_workbook(str(out))
     assert wb.sheetnames == ["Summary", "Clinics", "Consultants", "Rosters", "Hospitals"]
     assert wb["Clinics"].max_row == 6 and wb["Clinics"]["A1"].value == "Score"
+
+
+# ---- the doctor table ------------------------------------------------------------------------------
+from clinicleads import profile as PR  # noqa: E402
+
+
+def test_speciality_degrees_and_phone_type_come_only_from_the_listing():
+    assert PR.speciality("Dr. Priyam Fictionji - Cardiologist | Heart Doctor", "Doctor's clinic") == "Cardiology"
+    assert PR.speciality("Smile Braces & Aligners", "Dental clinic") == "Orthodontics"
+    assert PR.speciality("City ENT Clinic", "Doctor's clinic") == "ENT"
+    assert PR.speciality("Sunrise Clinic", "Doctor's clinic") == ""                 # nothing stated, nothing guessed
+    assert PR.speciality("Sunrise Clinic", "Eye clinic") == "Ophthalmology"
+    assert PR.degrees("Dr. A. Fictionsen, MBBS, M.D. (Medicine), DNB") == "MBBS, MD, DNB"
+    assert PR.degrees("Smile Dental Care") == ""
+    assert PR.phone_type("+91 94330 00000 (mobile)") == "Mobile (may be on WhatsApp)"
+    assert PR.phone_type("+91 33 2464 0000 (landline)") == "Landline"
+    assert PR.phone_type("") == ""
+
+
+def test_services_fit_the_kind_of_practice():
+    dental, why = PR.services("Dentistry", hospital=False, own_site=False, has_mail=True)
+    assert dental[:2] == ["Receptionist 24/7", "Appointment reminders"]
+    assert {"Follow-ups the doctor advises", "Missed visits rebooked", "Post-visit check", "Website"} <= set(dental)
+    assert "six-month checks" in why and "no website" in why
+    gp, _ = PR.services("General medicine", hospital=False, own_site=True, has_mail=True)
+    assert "Follow-ups the doctor advises" not in gp and "Website" not in gp
+    consultant, why = PR.services("Cardiology", hospital=True, own_site=True, has_mail=True)
+    assert "Morning sheet" in consultant and "works at a hospital" in why
+
+
+def test_the_doctor_table(tmp_path):
+    leads = [lead(f"Dr. {n} - Best Cardiologist", website=f"https://www.bighospital.example/doctors/{i}")
+             for i, n in enumerate(["Anita Fictionrao", "Vikram Inventedkar", "Rina Madeupta", "Sunil Notrealson"])]
+    leads += [{**lead("Dr Anita Fictionrao Heart Clinic, MBBS, DM", website="https://dranita.example",
+                      emails="a@dranita.example"), "Key": "k1", "Phones": "+91 94330 00001 (mobile)"},
+              {**lead("Sunrise Clinic", "Clinic / Polyclinic", phones=""), "Key": "k2"}]
+    for i, r in enumerate(leads):
+        r.setdefault("Key", f"r{i}")
+    rows = PR.rows_for([(CITY, leads)])
+    assert [r["Clinic / listing"] for r in rows] == ["Dr Anita Fictionrao Heart Clinic, MBBS, DM", "Sunrise Clinic"]
+    top = rows[0]
+    assert (top["Priority"], top["Doctor"], top["Speciality"], top["Degrees (as listed)"]) == \
+        ("High", "Dr. Anita Fictionrao", "Cardiology", "MBBS, DM")
+    assert top["Also listed at hospital"] == "bighospital.example" and "confirm" in top["Extra"]
+    assert top["Phone type"].startswith("Mobile") and "Morning sheet" in top["Services that fit (our suggestion)"]
+    low = rows[1]
+    assert (low["Priority"], low["Doctor"], low["Speciality"]) == ("Low", "", "General medicine")
+    assert "no phone published" in low["Extra"]
+    out = tmp_path / "t.xlsx"
+    assert PR.write_xlsx(rows, str(out), "Test") == 2
+    from openpyxl import load_workbook
+    wb = load_workbook(str(out))
+    assert wb.sheetnames == ["Read me", "Clinics"] and wb["Clinics"]["C1"].value == "Doctor"
+    assert any("Approx. age" == (c.value or "") for c in wb["Read me"]["A"])
